@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/typescript-node:20
+    container_name: caltrack-devcontainer
+    volumes:
+      - ..:/workspace:cached
+      - devcontainer_node_modules:/workspace/node_modules
+      - devcontainer_turbo:/workspace/.turbo
+    command: sleep infinity
+    networks:
+      - app-network
+    environment:
+      - DATABASE_URL=postgresql://caltrack:caltrack_dev_password@postgres:5432/caltrack
+      - REDIS_URL=redis://:caltrack_redis_password@redis:6379
+
+volumes:
+  devcontainer_node_modules:
+  devcontainer_turbo:

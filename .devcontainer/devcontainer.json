@@ -1,0 +1,113 @@
+{
+  "name": "CalTrack Development",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "../docker-compose.dev.yml",
+    "docker-compose.devcontainer.yml"
+  ],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "files.exclude": {
+          "**/.turbo": true,
+          "**/node_modules": true
+        }
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "ms-azuretools.vscode-docker",
+        "orta.vscode-jest",
+        "firsttris.vscode-jest-runner",
+        "msjsdiag.vscode-react-native",
+        "prisma.prisma",
+        "github.copilot",
+        "github.copilot-chat",
+        "gruntfuggly.todo-tree",
+        "usernamehw.errorlens",
+        "christian-kohler.npm-intellisense",
+        "christian-kohler.path-intellisense",
+        "mikestead.dotenv",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+  "forwardPorts": [
+    3000,    // Backend API
+    5432,    // PostgreSQL
+    6379,    // Redis
+    5050,    // pgAdmin
+    8025,    // Mailhog Web UI
+    8081,    // Metro Bundler
+    19000,   // Expo DevTools
+    19001,   // Expo DevTools
+    19002    // Expo DevTools
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "Backend API",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL"
+    },
+    "6379": {
+      "label": "Redis"
+    },
+    "5050": {
+      "label": "pgAdmin",
+      "onAutoForward": "openBrowser"
+    },
+    "8025": {
+      "label": "Mailhog",
+      "onAutoForward": "openBrowser"
+    },
+    "8081": {
+      "label": "Metro Bundler"
+    },
+    "19000": {
+      "label": "Expo DevTools"
+    }
+  },
+  "postCreateCommand": "npm install && echo '✅ DevContainer setup complete!'",
+  "postStartCommand": "docker-compose up -d postgres redis && echo '✅ Services started'",
+  "remoteUser": "node"
+}

@@ -1,0 +1,28 @@
+# Development Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
+# Copy root package files
+COPY package*.json ./
+COPY turbo.json ./
+
+# Copy workspace packages
+COPY packages/ ./packages/
+
+# Copy backend app
+COPY apps/backend/ ./apps/backend/
+
+# Install dependencies
+RUN npm install
+
+WORKDIR /app/apps/backend
+
+# Expose port
+EXPOSE 3000
+
+# Start in development mode with hot reload
+CMD ["npm", "run", "start:dev"]

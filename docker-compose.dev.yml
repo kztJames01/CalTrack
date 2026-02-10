@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    volumes:
+      # Enable hot reload for development
+      - ./apps/backend/src:/app/apps/backend/src:cached
+      - ./packages/shared-types/src:/app/packages/shared-types/src:cached
