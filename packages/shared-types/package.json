@@ -9,8 +9,8 @@
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
-    "@caltrack/eslint-config": "*",
-    "@caltrack/typescript-config": "*",
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
     "eslint": "^9.17.0",
     "typescript": "^5.9.2"
   }

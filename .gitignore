@@ -11,6 +11,7 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 
 # Testing
 coverage
@@ -72,3 +73,13 @@ web-build/
 
 # Sentry
 .sentryclirc
+
+
+archived/
+
+PHASE3_COMPLETE.md
+ARCHITECTURE.md
+QUICKSTART.md
+API.md
+PHASE2_COMPLETE.md
+SOCIAL_AUTH_SETUP.md
