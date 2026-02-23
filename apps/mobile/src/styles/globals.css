@@ -1,0 +1,57 @@
+:root {
+  /* Typography */
+  --font-size: 16px;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+
+  /* Colors - Background */
+  --background: #FAFAFA;
+  --foreground: #1A1A1A;
+
+  /* Colors - Card */
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
+
+  /* Colors - Popover */
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+
+  /* Colors - Primary */
+  --primary: #C8E77A;
+  --primary-foreground: #1A1A1A;
+
+  /* Colors - Secondary */
+  --secondary: #56B280;
+  --secondary-foreground: #FFFFFF;
+
+  /* Colors - Muted */
+  --muted: #F3F4F6;
+  --muted-foreground: #6B7280;
+
+  /* Colors - Accent */
+  --accent: #C8E77A;
+  --accent-foreground: #1A1A1A;
+
+  /* Colors - Destructive */
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  /* Colors - Border & Input */
+  --border: rgba(0, 0, 0, 0.06);
+  --input: rgba(0, 0, 0, 0.08);
+  --input-background: #FFFFFF;
+  --switch-background: #E5E7EB;
+
+  /* Colors - Ring (Focus) */
+  --ring: #C8E77A;
+
+  /* Charts */
+  --chart-1: #C8E77A;
+  --chart-2: #56B280;
+  --chart-3: #6B7280;
+  --chart-4: #FFFFFF;
+  --chart-5: #F3F4F6;
+
+  /* Border Radius */
+  --radius: 1rem;
+}

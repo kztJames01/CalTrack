@@ -20,5 +20,12 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@apple/app-store-server-library": "^2.0.0",
+    "@types/passport-google-oauth20": "^2.0.17",
+    "apple-signin-auth": "^2.0.0",
+    "google-auth-library": "^10.5.0",
+    "passport-google-oauth20": "^2.0.0"
+  }
 }
