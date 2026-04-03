@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Q } from '@nozbe/watermelondb';
 import { database } from '@/src/database';
 import User from '@/src/database/models/User';
 import { addToSyncQueue } from '@/src/database/sync';
@@ -67,7 +68,7 @@ export const useUserStore = create<UserState>()(
       loadUserPreferences: async () => {
         set({ isLoading: true });
         try {
-          const userCollection = database.collections.get<User>('users');
+          const userCollection = database.collections.get('users') as any;
           const users = await userCollection.query().fetch();
           
           if (users.length > 0) {
@@ -101,7 +102,7 @@ export const useUserStore = create<UserState>()(
       },
 
       updateUserPreferences: async (preferences: Partial<UserPreferences>) => {
-        const userCollection = database.collections.get<User>('users');
+        const userCollection = database.collections.get('users') as any;
         
         try {
           await database.write(async () => {

@@ -55,7 +55,7 @@ export const useMealStore = create<MealState>((set, get) => ({
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const mealCollection = database.collections.get<Meal>('meals');
+      const mealCollection = database.collections.get('meals') as any;
       const meals = await mealCollection
         .query(
           Q.where('meal_date', Q.gte(startOfDay.getTime())),
@@ -73,7 +73,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   createMeal: async (mealType: string, userId: string) => {
-    const mealCollection = database.collections.get<Meal>('meals');
+    const mealCollection = database.collections.get('meals') as any;
     
     const meal = await database.write(async () => {
       return await mealCollection.create((m: any) => {
@@ -106,7 +106,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   addFoodToMeal: async (mealId: string, foodData: any) => {
-    const foodItemCollection = database.collections.get<FoodItem>('food_items');
+    const foodItemCollection = database.collections.get('food_items') as any;
     
     await database.write(async () => {
       const foodItem = await foodItemCollection.create((f: any) => {
@@ -129,7 +129,7 @@ export const useMealStore = create<MealState>((set, get) => ({
       });
 
       // Update meal totals
-      const mealCollection = database.collections.get<Meal>('meals');
+      const mealCollection = database.collections.get('meals') as any;
       const meal = await mealCollection.find(mealId);
       await meal.recalculateTotals();
 
@@ -142,7 +142,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   updateFoodItem: async (foodItemId: string, updates: any) => {
-    const foodItemCollection = database.collections.get<FoodItem>('food_items');
+    const foodItemCollection = database.collections.get('food_items') as any;
     
     await database.write(async () => {
       const foodItem = await foodItemCollection.find(foodItemId);
@@ -164,7 +164,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   deleteFoodItem: async (foodItemId: string) => {
-    const foodItemCollection = database.collections.get<FoodItem>('food_items');
+    const foodItemCollection = database.collections.get('food_items') as any;
     
     await database.write(async () => {
       const foodItem = await foodItemCollection.find(foodItemId);
@@ -182,7 +182,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   deleteMeal: async (mealId: string) => {
-    const mealCollection = database.collections.get<Meal>('meals');
+    const mealCollection = database.collections.get('meals') as any;
     
     await database.write(async () => {
       const meal = await mealCollection.find(mealId);
@@ -204,8 +204,8 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   copyMeal: async (mealId: string, newDate: Date) => {
-    const mealCollection = database.collections.get<Meal>('meals');
-    const foodItemCollection = database.collections.get<FoodItem>('food_items');
+    const mealCollection = database.collections.get('meals') as any;
+    const foodItemCollection = database.collections.get('food_items') as any;
     
     await database.write(async () => {
       const originalMeal = await mealCollection.find(mealId);
