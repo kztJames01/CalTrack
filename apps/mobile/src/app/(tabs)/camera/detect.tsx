@@ -128,10 +128,7 @@ export default function FoodDetectionScreen() {
       photoUrl,
     };
 
-    router.push({
-      pathname: '/(tabs)/log-meal' as Href,
-      params: { foodData: JSON.stringify(foodData) },
-    });
+    router.push(`/(tabs)/log-meal?foodData=${encodeURIComponent(JSON.stringify(foodData))}` as Href);
   };
 
   const renderFoodItem = ({ item }: { item: DetectedFood }) => (

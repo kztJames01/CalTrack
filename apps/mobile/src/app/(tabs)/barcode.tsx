@@ -9,19 +9,26 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-  useCodeScanner,
-} from 'react-native-vision-camera';
 import { useRouter, Href } from 'expo-router';
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner';
 
+let VisionCamera: any = null;
+try {
+  VisionCamera = require('react-native-vision-camera');
+} catch {
+  VisionCamera = null;
+}
+
+const Camera = VisionCamera?.Camera;
+
 export default function BarcodeScannerScreen() {
   const router = useRouter();
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = VisionCamera?.useCameraDevice?.('back') ?? null;
+  const permissionState = VisionCamera?.useCameraPermission?.() ?? {
+    hasPermission: false,
+    requestPermission: async () => false,
+  };
+  const { hasPermission, requestPermission } = permissionState;
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualUPC, setManualUPC] = useState('');
   const [showPortionModal, setShowPortionModal] = useState(false);
@@ -37,9 +44,9 @@ export default function BarcodeScannerScreen() {
     searchByUPC,
   } = useBarcodeScanner();
 
-  const codeScanner = useCodeScanner({
+  const codeScanner = VisionCamera?.useCodeScanner?.({
     codeTypes: ['ean-13', 'ean-8', 'upc-a', 'upc-e', 'code-128', 'code-39'],
-    onCodeScanned: (codes) => {
+    onCodeScanned: (codes: any) => {
       handleBarcodeDetected(codes);
     },
   });
@@ -68,10 +75,7 @@ export default function BarcodeScannerScreen() {
       detectionMethod: 'barcode',
     };
 
-    router.push({
-      pathname: '/(tabs)/log-meal' as Href,
-      params: { foodData: JSON.stringify(foodData) },
-    });
+    router.push(`/(tabs)/log-meal?foodData=${encodeURIComponent(JSON.stringify(foodData))}` as Href);
   };
 
   if (!hasPermission) {
@@ -88,7 +92,9 @@ export default function BarcodeScannerScreen() {
   if (!device) {
     return (
       <View style={styles.container}>
-        <Text style={styles.permissionText}>No camera device found</Text>
+        <Text style={styles.permissionText}>
+          Camera module is unavailable in this build. Use `expo run:ios` development build.
+        </Text>
       </View>
     );
   }

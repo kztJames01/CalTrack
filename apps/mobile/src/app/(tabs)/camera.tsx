@@ -9,21 +9,28 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraPermission,
-  PhotoFile,
-} from 'react-native-vision-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter, Href } from 'expo-router';
 import { apiClient } from '../../lib/apiClient';
 
+let VisionCamera: any = null;
+try {
+  VisionCamera = require('react-native-vision-camera');
+} catch {
+  VisionCamera = null;
+}
+
+const Camera = VisionCamera?.Camera;
+
 export default function CameraScreen() {
   const router = useRouter();
-  const device = useCameraDevice('back');
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const camera = useRef<Camera>(null);
+  const device = VisionCamera?.useCameraDevice?.('back') ?? null;
+  const permissionState = VisionCamera?.useCameraPermission?.() ?? {
+    hasPermission: false,
+    requestPermission: async () => false,
+  };
+  const { hasPermission, requestPermission } = permissionState;
+  const camera = useRef<any>(null);
   
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -107,10 +114,7 @@ export default function CameraScreen() {
       const { photoUrl } = response.data;
 
       // Navigate to food detection screen with photo URL
-      router.push({
-        pathname: '/(tabs)/camera' as Href,
-        params: { photoUrl },
-      });
+      router.push(`/(tabs)/camera?photoUrl=${encodeURIComponent(photoUrl)}` as Href);
     } catch (error) {
       console.error('Failed to upload photo:', error);
       Alert.alert('Upload Failed', 'Failed to upload photo. Please try again.');
@@ -139,7 +143,9 @@ export default function CameraScreen() {
   if (!device) {
     return (
       <View style={styles.container}>
-        <Text style={styles.permissionText}>No camera device found</Text>
+        <Text style={styles.permissionText}>
+          Camera module is unavailable in this build. Use `expo run:ios` development build.
+        </Text>
       </View>
     );
   }

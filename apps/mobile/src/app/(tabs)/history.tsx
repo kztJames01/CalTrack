@@ -1,409 +1,595 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
+  ScrollView,
   TouchableOpacity,
-  Alert,
-  Platform,
+  Dimensions,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { Ionicons } from '@expo/vector-icons';
 import { database } from '../../database';
 import { Q } from '@nozbe/watermelondb';
 import Meal from '../../database/models/Meal';
-import { useRouter, Href } from 'expo-router';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { colors } from '../../styles/theme';
 
-interface MealWithDate extends Meal {
-  dateKey: string;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CHART_BAR_WIDTH = 28;
+const CHART_HEIGHT = 160;
+const TARGET_CALORIES = 1920;
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+interface DailyData {
+  day: string;
+  calories: number;
+  percentage: number;
 }
 
-export default function HistoryScreen() {
-  const router = useRouter();
-  const [meals, setMeals] = useState<MealWithDate[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'week' | 'month' | 'all'>('week');
-  const [isLoading, setIsLoading] = useState(true);
+export default function StatisticsScreen() {
+  const [weeklyData, setWeeklyData] = useState<DailyData[]>([]);
+  const [totalCalories, setTotalCalories] = useState(0);
+  const [avgProtein, setAvgProtein] = useState(0);
+  const [avgCarbs, setAvgCarbs] = useState(0);
+  const [avgFat, setAvgFat] = useState(0);
+  const [waterGlasses, setWaterGlasses] = useState(6);
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>('week');
 
   useEffect(() => {
-    loadMeals();
-  }, [dateFilter, searchQuery]);
+    loadStatistics();
+  }, [selectedPeriod]);
 
-  const loadMeals = async () => {
-    setIsLoading(true);
+  const loadStatistics = async () => {
     try {
-      const mealCollection = database.collections.get<Meal>('meals');
-      let query = mealCollection.query();
-
-      // Apply date filter
+      const mealCollection = database.collections.get('meals') as any;
       const now = new Date();
-      if (dateFilter === 'week') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        query = mealCollection.query(
-          Q.where('meal_date', Q.gte(weekAgo.getTime()))
-        );
-      } else if (dateFilter === 'month') {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        query = mealCollection.query(
-          Q.where('meal_date', Q.gte(monthAgo.getTime()))
-        );
-      }
 
-      let results = await query.fetch();
+      // Get start of current week (Monday)
+      const dayOfWeek = now.getDay();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+      monday.setHours(0, 0, 0, 0);
 
-      // Apply search filter if query exists
-      if (searchQuery.trim()) {
-        const foodItemsPromises = results.map(async (meal: Meal) => {
-          const foodItems = await meal.foodItems.fetch();
-          const hasMatch = foodItems.some((item: any) =>
-            item.name.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          return hasMatch ? meal : null;
-        });
+      const startDate =
+        selectedPeriod === 'week'
+          ? monday
+          : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        const filteredResults = await Promise.all(foodItemsPromises);
-        results = filteredResults.filter((meal: any) => meal !== null) as Meal[];
-      }
+      const results = await mealCollection
+        .query(Q.where('meal_date', Q.gte(startDate.getTime())))
+        .fetch();
 
-      // Sort by date descending and add date keys for grouping
-      const mealsWithDates = results
-        .sort((a: any, b: any) => b.date.getTime() - a.date.getTime())
-        .map((meal: any) => ({
-          ...meal,
-          dateKey: new Date(meal.date).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
-        })) as MealWithDate[];
+      // Aggregate by day of week
+      const dailyMap: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
+      DAYS.forEach((d) => (dailyMap[d] = { calories: 0, protein: 0, carbs: 0, fat: 0 }));
 
-      setMeals(mealsWithDates);
-    } catch (error) {
-      console.error('Failed to load meals:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      let totalCal = 0;
+      let totalProt = 0;
+      let totalCarb = 0;
+      let totalF = 0;
+      let count = 0;
 
-  const exportToCSV = async () => {
-    try {
-      // Generate CSV content
-      let csv = 'Date,Meal Type,Total Calories,Protein (g),Carbs (g),Fat (g)\n';
-
-      for (const meal of meals) {
-        const date = new Date((meal as any).date).toLocaleDateString();
-        csv += `${date},${(meal as any).mealType},${(meal as any).totalCalories},${(meal as any).totalProtein},${(meal as any).totalCarbs},${(meal as any).totalFat}\n`;
-      }
-
-      // Save to file
-      const fileName = `caltrack_export_${Date.now()}.csv`;
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
-
-      await FileSystem.writeAsStringAsync(filePath, csv, {
-        encoding: FileSystem.EncodingType.UTF8,
+      results.forEach((meal: any) => {
+        const date = new Date(meal.date);
+        const dayIndex = (date.getDay() + 6) % 7; // Monday = 0
+        const dayKey = DAYS[dayIndex];
+        if (dayKey) {
+          dailyMap[dayKey]!.calories += meal.totalCalories || 0;
+          dailyMap[dayKey]!.protein += meal.totalProtein || 0;
+          dailyMap[dayKey]!.carbs += meal.totalCarbs || 0;
+          dailyMap[dayKey]!.fat += meal.totalFat || 0;
+        }
+        totalCal += meal.totalCalories || 0;
+        totalProt += meal.totalProtein || 0;
+        totalCarb += meal.totalCarbs || 0;
+        totalF += meal.totalFat || 0;
+        count++;
       });
 
-      // Share file
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(filePath, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Export Meal History',
-        });
-      } else {
-        Alert.alert('Success', `File saved to ${filePath}`);
-      }
+      const weekly = DAYS.map((day) => ({
+        day,
+        calories: Math.round(dailyMap[day]!.calories),
+        percentage: Math.round((dailyMap[day]!.calories / TARGET_CALORIES) * 100),
+      }));
+
+      setWeeklyData(weekly);
+      setTotalCalories(Math.round(totalCal));
+      setAvgProtein(count > 0 ? Math.round(totalProt / Math.max(1, Object.values(dailyMap).filter((d) => d.calories > 0).length)) : 0);
+      setAvgCarbs(count > 0 ? Math.round(totalCarb / Math.max(1, Object.values(dailyMap).filter((d) => d.calories > 0).length)) : 0);
+      setAvgFat(count > 0 ? Math.round(totalF / Math.max(1, Object.values(dailyMap).filter((d) => d.calories > 0).length)) : 0);
     } catch (error) {
-      console.error('Export failed:', error);
-      Alert.alert('Error', 'Failed to export data');
+      console.error('Failed to load statistics:', error);
     }
   };
 
-  const renderMealItem = ({ item }: { item: MealWithDate }) => {
-    const isNewDate =
-      meals.findIndex((m) => (m as any).id === (item as any).id) === 0 ||
-      meals[meals.findIndex((m) => (m as any).id === (item as any).id) - 1]?.dateKey !== item.dateKey;
+  const maxCalories = useMemo(
+    () => Math.max(...weeklyData.map((d) => d.calories), TARGET_CALORIES),
+    [weeklyData]
+  );
 
-    return (
-      <>
-        {isNewDate && (
-          <View style={styles.dateHeader}>
-            <Text style={styles.dateHeaderText}>{item.dateKey}</Text>
-            <Text style={styles.dateHeaderTotal}>
-              {meals
-                .filter((m) => m.dateKey === item.dateKey)
-                .reduce((sum, m) => sum + (m as any).totalCalories, 0)
-                .toFixed(0)}{' '}
-              cal
-            </Text>
-          </View>
-        )}
-        <TouchableOpacity
-          style={styles.mealCard}
-          onPress={() => router.push(`/(tabs)/meal/${(item as any).id}` as Href)}
-        >
-          <View style={styles.mealHeader}>
-            <Text style={styles.mealType}>
-              {(item as any).mealType.charAt(0).toUpperCase() + (item as any).mealType.slice(1)}
-            </Text>
-            <Text style={styles.mealTime}>
-              {new Date((item as any).date).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-            </Text>
-          </View>
-          <View style={styles.mealNutrition}>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{Math.round((item as any).totalCalories)}</Text>
-              <Text style={styles.nutritionLabel}>cal</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{Math.round((item as any).totalProtein)}g</Text>
-              <Text style={styles.nutritionLabel}>protein</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{Math.round((item as any).totalCarbs)}g</Text>
-              <Text style={styles.nutritionLabel}>carbs</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{Math.round((item as any).totalFat)}g</Text>
-              <Text style={styles.nutritionLabel}>fat</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </>
-    );
-  };
+  const todayCalories = useMemo(() => {
+    const todayIndex = (new Date().getDay() + 6) % 7;
+    return weeklyData[todayIndex]?.calories ?? 0;
+  }, [weeklyData]);
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
-
-        <TextInput
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search by food name..."
-          placeholderTextColor="#94a3b8"
-        />
-
-        <View style={styles.filterButtons}>
-          <TouchableOpacity
-            style={[styles.filterButton, dateFilter === 'week' && styles.filterButtonActive]}
-            onPress={() => setDateFilter('week')}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                dateFilter === 'week' && styles.filterButtonTextActive,
-              ]}
-            >
-              Week
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, dateFilter === 'month' && styles.filterButtonActive]}
-            onPress={() => setDateFilter('month')}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                dateFilter === 'month' && styles.filterButtonTextActive,
-              ]}
-            >
-              Month
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, dateFilter === 'all' && styles.filterButtonActive]}
-            onPress={() => setDateFilter('all')}
-          >
-            <Text
-              style={[
-                styles.filterButtonText,
-                dateFilter === 'all' && styles.filterButtonTextActive,
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.exportButton} onPress={exportToCSV}>
-          <Text style={styles.exportButtonText}>📊 Export CSV</Text>
+        <Text style={styles.headerTitle}>Statistics</Text>
+        <TouchableOpacity>
+          <Ionicons name="ellipsis-horizontal" size={24} color={colors.foreground} />
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Loading...</Text>
-        </View>
-      ) : meals.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No meals found</Text>
-          <Text style={styles.emptySubtext}>
-            {searchQuery
-              ? 'Try a different search term'
-              : 'Start logging meals to see your history'}
+      {/* Period Selector */}
+      <View style={styles.periodRow}>
+        <TouchableOpacity
+          style={[styles.periodBtn, selectedPeriod === 'week' && styles.periodBtnActive]}
+          onPress={() => setSelectedPeriod('week')}
+        >
+          <Text style={[styles.periodText, selectedPeriod === 'week' && styles.periodTextActive]}>
+            Week
           </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.periodBtn, selectedPeriod === 'month' && styles.periodBtnActive]}
+          onPress={() => setSelectedPeriod('month')}
+        >
+          <Text style={[styles.periodText, selectedPeriod === 'month' && styles.periodTextActive]}>
+            Month
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Calories Card */}
+      <View style={styles.card}>
+        <View style={styles.calorieHeader}>
+          <View>
+            <Text style={styles.calorieLabel}>Calories</Text>
+            <Text style={styles.calorieValue}>
+              {todayCalories} <Text style={styles.calorieUnit}>Kcal</Text>
+            </Text>
+          </View>
+          <View style={styles.targetBadge}>
+            <Ionicons name="flame" size={14} color={colors.secondary} />
+            <Text style={styles.targetText}>Target: {TARGET_CALORIES} Kcal</Text>
+          </View>
         </View>
-      ) : (
-        <FlashList
-          data={meals}
-          renderItem={renderMealItem}
-          estimatedItemSize={120}
-          keyExtractor={(item) => (item as any).id}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-    </View>
+
+        {/* Bar Chart */}
+        <View style={styles.chartContainer}>
+          {/* Horizontal guide lines */}
+          <View style={styles.guideLines}>
+            {[100, 75, 50, 25, 0].map((pct) => (
+              <View key={pct} style={styles.guideLine}>
+                <Text style={styles.guideLabel}>{pct}%</Text>
+                <View style={styles.guideRule} />
+              </View>
+            ))}
+          </View>
+
+          {/* Bars */}
+          <View style={styles.barsRow}>
+            {weeklyData.map((item, index) => {
+              const barHeight = maxCalories > 0
+                ? (item.calories / maxCalories) * CHART_HEIGHT
+                : 0;
+              const isToday = index === (new Date().getDay() + 6) % 7;
+
+              return (
+                <View key={item.day} style={styles.barColumn}>
+                  <Text style={[styles.barPercentage, isToday && styles.barPercentageActive]}>
+                    {item.percentage}%
+                  </Text>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.bar,
+                        {
+                          height: Math.max(barHeight, 4),
+                          backgroundColor: isToday ? colors.secondary : colors.primary,
+                          borderRadius: 6,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.barLabel, isToday && styles.barLabelActive]}>
+                    {item.day}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
+      {/* Stat Cards Grid */}
+      <View style={styles.statsGrid}>
+        {/* Exercise Card */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardHeader}>
+            <View style={[styles.statIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Ionicons name="bicycle" size={18} color="#FB8C00" />
+            </View>
+            <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+          </View>
+          <Text style={styles.statLabel}>Exercise</Text>
+          <Text style={styles.statValue}>
+            {avgProtein > 0 ? (avgProtein * 0.04).toFixed(1) : '0.0'}{' '}
+            <Text style={styles.statUnit}>hours</Text>
+          </Text>
+          <View style={styles.miniBarContainer}>
+            <View style={[styles.miniBar, { width: '65%', backgroundColor: '#FB8C00' }]} />
+          </View>
+        </View>
+
+        {/* Protein Card (BPM-style) */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardHeader}>
+            <View style={[styles.statIcon, { backgroundColor: '#FCE4EC' }]}>
+              <Ionicons name="heart" size={18} color="#E91E63" />
+            </View>
+            <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+          </View>
+          <Text style={styles.statLabel}>Avg Protein</Text>
+          <Text style={styles.statValue}>
+            {avgProtein} <Text style={styles.statUnit}>g</Text>
+          </Text>
+          <View style={styles.miniWaveRow}>
+            {[40, 65, 30, 80, 55, 70, 45, 60, 35, 75].map((h, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.miniWaveBar,
+                  { height: h * 0.25, backgroundColor: '#E91E63', opacity: 0.3 + (h / 100) * 0.7 },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Carbs Card */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardHeader}>
+            <View style={[styles.statIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="nutrition" size={18} color={colors.secondary} />
+            </View>
+            <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+          </View>
+          <Text style={styles.statLabel}>Avg Carbs</Text>
+          <Text style={styles.statValue}>
+            {avgCarbs} <Text style={styles.statUnit}>g</Text>
+          </Text>
+          <View style={styles.miniBarContainer}>
+            <View style={[styles.miniBar, { width: `${Math.min((avgCarbs / 300) * 100, 100)}%`, backgroundColor: colors.secondary }]} />
+          </View>
+        </View>
+
+        {/* Water Card */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardHeader}>
+            <View style={[styles.statIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="water" size={18} color="#2196F3" />
+            </View>
+            <Ionicons name="ellipsis-horizontal" size={16} color={colors.mutedForeground} />
+          </View>
+          <Text style={styles.statLabel}>Water</Text>
+          <Text style={styles.statValue}>
+            {waterGlasses} <Text style={styles.statUnit}>glasses</Text>
+          </Text>
+          <View style={styles.waterDotsRow}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.waterDot,
+                  { backgroundColor: i < waterGlasses ? '#2196F3' : '#E3F2FD' },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* Weekly Summary Card */}
+      <View style={[styles.card, { marginBottom: 100 }]}>
+        <Text style={styles.summaryTitle}>Weekly Summary</Text>
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>{totalCalories}</Text>
+            <Text style={styles.summaryLabel}>Total Kcal</Text>
+          </View>
+          <View style={[styles.summaryDivider]} />
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>{avgProtein}g</Text>
+            <Text style={styles.summaryLabel}>Avg Protein</Text>
+          </View>
+          <View style={[styles.summaryDivider]} />
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>{avgCarbs}g</Text>
+            <Text style={styles.summaryLabel}>Avg Carbs</Text>
+          </View>
+          <View style={[styles.summaryDivider]} />
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryValue}>{avgFat}g</Text>
+            <Text style={styles.summaryLabel}>Avg Fat</Text>
+          </View>
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 16,
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-  },
-  filterButtonActive: {
-    backgroundColor: '#2563eb',
-  },
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  filterButtonTextActive: {
-    color: '#fff',
-  },
-  exportButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-  },
-  exportButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#334155',
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  dateHeader: {
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 12,
   },
-  dateHeaderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#334155',
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.foreground,
   },
-  dateHeaderTotal: {
+  periodRow: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: colors.muted,
+    borderRadius: 12,
+    padding: 4,
+  },
+  periodBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  periodBtnActive: {
+    backgroundColor: colors.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  periodText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2563eb',
+    color: colors.mutedForeground,
   },
-  mealCard: {
-    backgroundColor: '#fff',
+  periodTextActive: {
+    color: colors.foreground,
+  },
+  card: {
+    backgroundColor: colors.card,
     marginHorizontal: 20,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    marginBottom: 16,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  mealHeader: {
+  calorieHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  calorieLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.mutedForeground,
+    marginBottom: 4,
+  },
+  calorieValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.foreground,
+  },
+  calorieUnit: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.mutedForeground,
+  },
+  targetBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+  },
+  targetText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.secondary,
+  },
+  chartContainer: {
+    position: 'relative',
+    height: CHART_HEIGHT + 50,
+  },
+  guideLines: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: CHART_HEIGHT,
+    justifyContent: 'space-between',
+  },
+  guideLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  guideLabel: {
+    width: 32,
+    fontSize: 10,
+    color: colors.mutedForeground,
+    textAlign: 'right',
+    marginRight: 8,
+  },
+  guideRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  barsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    paddingLeft: 42,
+    height: CHART_HEIGHT + 50,
+    paddingTop: 0,
+  },
+  barColumn: {
+    alignItems: 'center',
+    width: CHART_BAR_WIDTH + 8,
+  },
+  barPercentage: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.mutedForeground,
+    marginBottom: 4,
+  },
+  barPercentageActive: {
+    color: colors.secondary,
+  },
+  barTrack: {
+    width: CHART_BAR_WIDTH,
+    height: CHART_HEIGHT,
+    backgroundColor: colors.muted,
+    borderRadius: 6,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  bar: {
+    width: '100%',
+  },
+  barLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.mutedForeground,
+    marginTop: 8,
+  },
+  barLabelActive: {
+    color: colors.secondary,
+    fontWeight: '700',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 14,
+    gap: 12,
+    marginBottom: 16,
+  },
+  statCard: {
+    width: (SCREEN_WIDTH - 40 - 12) / 2,
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  mealType: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  mealTime: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  mealNutrition: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  nutritionItem: {
-    alignItems: 'center',
-  },
-  nutritionValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-  },
-  nutritionLabel: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  emptyState: {
-    flex: 1,
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
   },
-  emptyText: {
+  statLabel: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.foreground,
+    marginBottom: 10,
+  },
+  statUnit: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.mutedForeground,
+  },
+  miniBarContainer: {
+    height: 6,
+    backgroundColor: colors.muted,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  miniBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  miniWaveRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    height: 20,
+  },
+  miniWaveBar: {
+    width: 4,
+    borderRadius: 2,
+  },
+  waterDotsRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  waterDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  summaryTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: colors.foreground,
+    marginBottom: 16,
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.foreground,
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+  },
+  summaryDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: colors.border,
   },
 });
