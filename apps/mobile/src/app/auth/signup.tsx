@@ -15,7 +15,9 @@ import { useRouter, Link } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import { colors } from '../../styles/theme';
 
 const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -66,52 +68,66 @@ export default function SignupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.foreground} />
+        </TouchableOpacity>
+
         <View style={styles.header}>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Start your nutrition journey today</Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>First Name</Text>
-            <Controller
-              control={control}
-              name="firstName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, errors.firstName && styles.inputError]}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  placeholder="Enter your first name"
-                  autoCapitalize="words"
-                  editable={!isLoading}
-                />
+          {/* Name Row */}
+          <View style={styles.nameRow}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+              <Text style={styles.label}>First Name</Text>
+              <Controller
+                control={control}
+                name="firstName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={[styles.inputWrapper, errors.firstName && styles.inputError]}>
+                    <Ionicons name="person-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                      placeholder="First name"
+                      placeholderTextColor={colors.mutedForeground}
+                      autoCapitalize="words"
+                      editable={!isLoading}
+                    />
+                  </View>
+                )}
+              />
+              {errors.firstName && (
+                <Text style={styles.errorText}>{errors.firstName.message}</Text>
               )}
-            />
-            {errors.firstName && (
-              <Text style={styles.errorText}>{errors.firstName.message}</Text>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Last Name (Optional)</Text>
-            <Controller
-              control={control}
-              name="lastName"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={styles.input}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  placeholder="Enter your last name"
-                  autoCapitalize="words"
-                  editable={!isLoading}
-                />
-              )}
-            />
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+              <Text style={styles.label}>Last Name</Text>
+              <Controller
+                control={control}
+                name="lastName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      onBlur={onBlur}
+                      onChangeText={onChange}
+                      value={value}
+                      placeholder="Optional"
+                      placeholderTextColor={colors.mutedForeground}
+                      autoCapitalize="words"
+                      editable={!isLoading}
+                    />
+                  </View>
+                )}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -120,17 +136,21 @@ export default function SignupScreen() {
               control={control}
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!isLoading}
-                />
+                <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
+                  <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                    placeholder="Enter your email"
+                    placeholderTextColor={colors.mutedForeground}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    editable={!isLoading}
+                  />
+                </View>
               )}
             />
             {errors.email && (
@@ -144,24 +164,25 @@ export default function SignupScreen() {
               control={control}
               name="password"
               render={({ field: { onChange, onBlur, value } }) => (
-                <View>
+                <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                  <Ionicons name="lock-closed-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
                   <TextInput
-                    style={[styles.input, errors.password && styles.inputError]}
+                    style={styles.input}
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
                     placeholder="Create a password"
+                    placeholderTextColor={colors.mutedForeground}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     editable={!isLoading}
                   />
-                  <TouchableOpacity
-                    style={styles.showPasswordButton}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    <Text style={styles.showPasswordText}>
-                      {showPassword ? 'Hide' : 'Show'}
-                    </Text>
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.mutedForeground}
+                    />
                   </TouchableOpacity>
                 </View>
               )}
@@ -177,24 +198,25 @@ export default function SignupScreen() {
               control={control}
               name="confirmPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <View>
+                <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
+                  <Ionicons name="lock-closed-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
                   <TextInput
-                    style={[styles.input, errors.confirmPassword && styles.inputError]}
+                    style={styles.input}
                     onBlur={onBlur}
                     onChangeText={onChange}
                     value={value}
                     placeholder="Confirm your password"
+                    placeholderTextColor={colors.mutedForeground}
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
                     editable={!isLoading}
                   />
-                  <TouchableOpacity
-                    style={styles.showPasswordButton}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    <Text style={styles.showPasswordText}>
-                      {showConfirmPassword ? 'Hide' : 'Show'}
-                    </Text>
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.mutedForeground}
+                    />
                   </TouchableOpacity>
                 </View>
               )}
@@ -208,9 +230,10 @@ export default function SignupScreen() {
             style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
             onPress={handleSubmit(onSubmit)}
             disabled={isLoading}
+            activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.signupButtonText}>Sign Up</Text>
             )}
@@ -233,29 +256,46 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 24,
+    paddingTop: 60,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   header: {
     alignItems: 'center',
     marginBottom: 32,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2563eb',
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.foreground,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.mutedForeground,
   },
   form: {
     width: '100%',
+  },
+  nameRow: {
+    flexDirection: 'row',
   },
   inputGroup: {
     marginBottom: 16,
@@ -263,47 +303,52 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#334155',
+    color: colors.foreground,
     marginBottom: 8,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    paddingHorizontal: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#fff',
+    color: colors.foreground,
   },
   inputError: {
-    borderColor: '#ef4444',
+    borderColor: colors.destructive,
   },
   errorText: {
-    color: '#ef4444',
+    color: colors.destructive,
     fontSize: 12,
-    marginTop: 4,
-  },
-  showPasswordButton: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-  },
-  showPasswordText: {
-    color: '#2563eb',
-    fontSize: 14,
-    fontWeight: '600',
+    marginTop: 6,
   },
   signupButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: colors.secondary,
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: colors.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signupButtonDisabled: {
     opacity: 0.6,
   },
   signupButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -311,13 +356,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
+    marginBottom: 16,
   },
   loginText: {
-    color: '#64748b',
+    color: colors.mutedForeground,
     fontSize: 14,
   },
   loginLink: {
-    color: '#2563eb',
+    color: colors.secondary,
     fontSize: 14,
     fontWeight: '600',
   },
