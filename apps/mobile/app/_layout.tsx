@@ -3,7 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -16,7 +16,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'auth',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -51,14 +51,24 @@ function RootLayoutNav() {
   const { isAuthenticated, checkAuth } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   // Check auth on mount
   useEffect(() => {
-    checkAuth();
+    const initializeAuth = async () => {
+      await checkAuth();
+      setIsAuthReady(true);
+    };
+
+    initializeAuth();
   }, []);
 
   // Protected route logic
   useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
     const inAuthGroup = segments[0] === 'auth';
     
     if (!isAuthenticated && !inAuthGroup) {
@@ -69,6 +79,10 @@ function RootLayoutNav() {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, segments]);
+
+  if (!isAuthReady) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
