@@ -16,7 +16,6 @@
     "@react-native-picker/picker": "2.6.1",
     "@react-navigation/native": "^7.1.8",
     "@shopify/flash-list": "^1.6.3",
-    "axios": "^1.6.5",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-file-system": "~18.0.11",
@@ -31,8 +30,8 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.10",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-hook-form": "^7.49.3",
     "react-native": "0.81.5",
     "react-native-chart-kit": "^6.12.0",
@@ -49,8 +48,8 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@types/react": "~19.2.4",
-    "react-test-renderer": "19.2.4",
+    "@types/react": "~19.1.0",
+    "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
   },
   "private": true

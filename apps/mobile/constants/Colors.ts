@@ -1,33 +1,33 @@
-const tintColorLight = '#56B280';
-const tintColorDark = '#C8E77A';
+const tintColorLight = '#0C6A73';
+const tintColorDark = '#D9A36A';
 
 export default {
   light: {
-    text: '#1A1A1A',
-    background: '#FAFAFA',
+    text: '#253238',
+    background: '#F6F2E8',
     tint: tintColorLight,
-    tabIconDefault: '#9CA3AF',
+    tabIconDefault: '#8A959B',
     tabIconSelected: tintColorLight,
-    card: '#FFFFFF',
-    border: 'rgba(0,0,0,0.06)',
-    primary: '#C8E77A',
-    primaryDark: '#56B280',
-    muted: '#F3F4F6',
-    mutedForeground: '#6B7280',
+    card: '#FFFCF5',
+    border: 'rgba(37, 50, 56, 0.14)',
+    primary: '#D9A36A',
+    primaryDark: '#0C6A73',
+    muted: '#EFE7D8',
+    mutedForeground: '#6F7A80',
     destructive: '#EF4444',
   },
   dark: {
-    text: '#FFFFFF',
-    background: '#121212',
+    text: '#F5F7F8',
+    background: '#0D2A2F',
     tint: tintColorDark,
-    tabIconDefault: '#6B7280',
+    tabIconDefault: '#82949A',
     tabIconSelected: tintColorDark,
-    card: '#1E1E1E',
-    border: 'rgba(255,255,255,0.08)',
-    primary: '#C8E77A',
-    primaryDark: '#56B280',
-    muted: '#2A2A2A',
-    mutedForeground: '#9CA3AF',
+    card: '#13363B',
+    border: 'rgba(255,255,255,0.12)',
+    primary: '#D9A36A',
+    primaryDark: '#0C6A73',
+    muted: '#1B4349',
+    mutedForeground: '#B9C4C8',
     destructive: '#EF4444',
   },
 };

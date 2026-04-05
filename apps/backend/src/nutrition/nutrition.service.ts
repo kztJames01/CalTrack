@@ -17,7 +17,7 @@ export class NutritionService {
   private readonly nutritionixBaseUrl = 'https://trackapi.nutritionix.com/v2';
   private readonly cacheKeyPrefix = 'nutrition:';
   private readonly cacheTTL = 60 * 60 * 24; // 24 hours
-  private visionClient: ImageAnnotatorClient;
+  private visionClient?: ImageAnnotatorClient;
 
   constructor(
     private readonly configService: ConfigService,
@@ -61,7 +61,7 @@ export class NutritionService {
 
       return foods;
     } catch (error) {
-      this.logger.error(`Nutritionix search error: ${error.message}`);
+      this.logger.error(`Nutritionix search error: ${error}`);
       throw new HttpException(
         'Failed to search for food',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -102,7 +102,7 @@ export class NutritionService {
       if (error instanceof HttpException) {
         throw error;
       }
-      this.logger.error(`Nutritionix barcode error: ${error.message}`);
+      this.logger.error(`Nutritionix barcode error: ${error}`);
       throw new HttpException(
         'Failed to get food by barcode',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -143,7 +143,7 @@ export class NutritionService {
       if (error instanceof HttpException) {
         throw error;
       }
-      this.logger.error(`Nutritionix details error: ${error.message}`);
+      this.logger.error(`Nutritionix details error: ${error}`);
       throw new HttpException(
         'Failed to get nutrition details',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -222,7 +222,7 @@ export class NutritionService {
 
       return detectionResult;
     } catch (error) {
-      this.logger.error(`Vision API error: ${error.message}`);
+      this.logger.error(`Vision API error: ${error}`);
       throw new HttpException(
         'Failed to analyze photo',
         HttpStatus.INTERNAL_SERVER_ERROR,
