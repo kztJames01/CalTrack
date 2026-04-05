@@ -1,51 +1,51 @@
 export const colors = {
   // Background
-  background: '#FAFAFA',
-  foreground: '#1A1A1A',
+  background: '#F6F2E8',
+  foreground: '#253238',
 
   // Card
-  card: '#FFFFFF',
-  cardForeground: '#1A1A1A',
+  card: '#FFFCF5',
+  cardForeground: '#253238',
 
   // Popover
-  popover: '#FFFFFF',
-  popoverForeground: '#1A1A1A',
+  popover: '#FFFCF5',
+  popoverForeground: '#253238',
 
   // Primary
-  primary: '#C8E77A',
-  primaryForeground: '#1A1A1A',
+  primary: '#D9A36A',
+  primaryForeground: '#FFFFFF',
 
   // Secondary
-  secondary: '#56B280',
+  secondary: '#0C6A73',
   secondaryForeground: '#FFFFFF',
 
   // Muted
-  muted: '#F3F4F6',
-  mutedForeground: '#6B7280',
+  muted: '#EFE7D8',
+  mutedForeground: '#6F7A80',
 
   // Accent
-  accent: '#C8E77A',
-  accentForeground: '#1A1A1A',
+  accent: '#E7C29A',
+  accentForeground: '#253238',
 
   // Destructive
   destructive: '#EF4444',
   destructiveForeground: '#FFFFFF',
 
   // Border & Input
-  border: 'rgba(0, 0, 0, 0.06)',
-  input: 'rgba(0, 0, 0, 0.08)',
-  inputBackground: '#FFFFFF',
-  switchBackground: '#E5E7EB',
+  border: 'rgba(37, 50, 56, 0.14)',
+  input: 'rgba(12, 106, 115, 0.14)',
+  inputBackground: '#FFFCF5',
+  switchBackground: '#DFD3BE',
 
   // Ring (Focus)
-  ring: '#C8E77A',
+  ring: '#0C6A73',
 
   // Charts
-  chart1: '#C8E77A',
-  chart2: '#56B280',
-  chart3: '#6B7280',
-  chart4: '#FFFFFF',
-  chart5: '#F3F4F6',
+  chart1: '#0C6A73',
+  chart2: '#D9A36A',
+  chart3: '#6F7A80',
+  chart4: '#FFFCF5',
+  chart5: '#EFE7D8',
 } as const;
 
 export const typography = {

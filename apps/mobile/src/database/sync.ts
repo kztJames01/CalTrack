@@ -217,7 +217,7 @@ async function upsertUser(userData: any): Promise<void> {
   const existing = await userCollection.find(userData.id).catch(() => null);
 
   if (existing) {
-    await existing.update((user) => {
+    await existing.update((user: User) => {
       Object.assign(user, {
         email: userData.email,
         name: userData.name,
@@ -236,7 +236,7 @@ async function upsertUser(userData: any): Promise<void> {
       });
     });
   } else {
-    await userCollection.create((user) => {
+    await userCollection.create((user: User) => {
       user._raw.id = userData.id;
       Object.assign(user, {
         email: userData.email,
@@ -265,7 +265,7 @@ async function upsertMeal(mealData: any): Promise<void> {
   const existing = await mealCollection.find(mealData.id).catch(() => null);
 
   if (existing) {
-    await existing.update((meal) => {
+    await existing.update((meal: Meal) => {
       Object.assign(meal, {
         userId: mealData.userId,
         name: mealData.name,
@@ -282,7 +282,7 @@ async function upsertMeal(mealData: any): Promise<void> {
       });
     });
   } else {
-    await mealCollection.create((meal) => {
+    await mealCollection.create((meal: Meal) => {
       meal._raw.id = mealData.id;
       Object.assign(meal, {
         userId: mealData.userId,
@@ -309,7 +309,7 @@ async function upsertFoodItem(foodItemData: any): Promise<void> {
   const existing = await foodItemCollection.find(foodItemData.id).catch(() => null);
 
   if (existing) {
-    await existing.update((foodItem) => {
+    await existing.update((foodItem: FoodItem) => {
       Object.assign(foodItem, {
         mealId: foodItemData.mealId,
         name: foodItemData.name,
@@ -330,7 +330,7 @@ async function upsertFoodItem(foodItemData: any): Promise<void> {
       });
     });
   } else {
-    await foodItemCollection.create((foodItem) => {
+    await foodItemCollection.create((foodItem: FoodItem) => {
       foodItem._raw.id = foodItemData.id;
       Object.assign(foodItem, {
         mealId: foodItemData.mealId,
@@ -364,7 +364,7 @@ export async function addToSyncQueue(
   payload: any
 ): Promise<void> {
   await database.write(async () => {
-    await syncQueueCollection.create((item) => {
+    await syncQueueCollection.create((item: SyncQueue) => {
       item.recordType = recordType;
       item.recordId = recordId;
       item.operation = operation;

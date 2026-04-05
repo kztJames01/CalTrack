@@ -182,16 +182,9 @@ export default function ProfileScreen() {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      const result = await syncDatabase();
+      await syncDatabase();
       
-      if (result.success) {
-        Alert.alert('Success', `Synced ${result.synced} items successfully!`);
-      } else {
-        Alert.alert(
-          'Sync Completed with Errors',
-          `Synced: ${result.synced}\nFailed: ${result.failed}\n\n${result.errors.join('\n')}`
-        );
-      }
+      Alert.alert('Success', 'Sync completed successfully!');
       
       await loadPendingSyncCount();
     } catch (error) {

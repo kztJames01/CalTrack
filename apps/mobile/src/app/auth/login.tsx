@@ -10,14 +10,19 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  SafeAreaView,
+  Image,
 } from 'react-native';
 import { useRouter, Link, Href } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../styles/theme';
+
+const savorSymbol = require('../../../assets/images/branding/savor-symbol.png');
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -48,191 +53,203 @@ export default function LoginScreen() {
       clearError();
       await login(data.email, data.password);
       router.replace('/(tabs)');
-    } catch (err) {
+    } catch {
       Alert.alert('Login Failed', error || 'An error occurred during login');
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Ionicons name="leaf" size={36} color={colors.secondary} />
-          </View>
-          <Text style={styles.title}>CalTrack</Text>
-          <Text style={styles.subtitle}>Your Daily Guide to Smarter Eating.</Text>
-        </View>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient colors={['#0D2A2F', '#134047', '#1B525A']} style={styles.gradient}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-                  <Ionicons name="mail-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                    placeholder="Enter your email"
-                    placeholderTextColor={colors.mutedForeground}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    editable={!isLoading}
-                  />
-                </View>
-              )}
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email.message}</Text>
-            )}
-          </View>
+            <View style={styles.brandRow}>
+              <Image source={savorSymbol} style={styles.logoImage} resizeMode="contain" />
+              <View>
+                <Text style={styles.brandText}>Savor</Text>
+                <Text style={styles.brandSubtext}>AI Calorie Tracker</Text>
+              </View>
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                  <Ionicons name="lock-closed-outline" size={20} color={colors.mutedForeground} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                    placeholder="Enter your password"
-                    placeholderTextColor={colors.mutedForeground}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoComplete="password"
-                    editable={!isLoading}
-                  />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                    <Ionicons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={20}
-                      color={colors.mutedForeground}
-                    />
+            <View style={styles.formCard}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>Log in to continue tracking your meals.</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
+                      <Ionicons name="mail-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        value={value}
+                        placeholder="Enter your email"
+                        placeholderTextColor={colors.mutedForeground}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        editable={!isLoading}
+                      />
+                    </View>
+                  )}
+                />
+                {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                      <Ionicons name="lock-closed-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        value={value}
+                        placeholder="Enter your password"
+                        placeholderTextColor={colors.mutedForeground}
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        autoComplete="password"
+                        editable={!isLoading}
+                      />
+                      <TouchableOpacity onPress={() => setShowPassword((prev) => !prev)}>
+                        <Ionicons
+                          name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                          size={20}
+                          color={colors.mutedForeground}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+                {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+              </View>
+
+              <View style={styles.forgotPasswordRow}>
+                <Link href={'/auth/forgot-password' as Href} asChild>
+                  <TouchableOpacity>
+                    <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
                   </TouchableOpacity>
-                </View>
-              )}
-            />
-            {errors.password && (
-              <Text style={styles.errorText}>{errors.password.message}</Text>
-            )}
-          </View>
+                </Link>
+              </View>
 
-          {/* Forgot Password */}
-          <View style={styles.forgotPasswordRow}>
-            <Link href={'/auth/forgot-password' as Href} asChild>
-              <TouchableOpacity>
-                <Text style={styles.forgotPasswordLink}>Forgot Password?</Text>
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                onPress={handleSubmit(onSubmit)}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.loginButtonText}>Log In</Text>}
               </TouchableOpacity>
-            </Link>
-          </View>
 
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleSubmit(onSubmit)}
-            disabled={isLoading}
-            activeOpacity={0.8}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.loginButtonText}>Log In</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Login */}
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Ionicons name="logo-google" size={20} color={colors.foreground} />
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialButton} activeOpacity={0.7}>
-            <Ionicons name="logo-apple" size={20} color={colors.foreground} />
-            <Text style={styles.socialButtonText}>Continue with Apple</Text>
-          </TouchableOpacity>
-
-          {/* Sign Up */}
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <Link href={'/auth/signup' as Href} asChild>
-              <TouchableOpacity>
-                <Text style={styles.signupLink}>Sign Up</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>Don't have an account? </Text>
+                <Link href={'/auth/signup' as Href} asChild>
+                  <TouchableOpacity>
+                    <Text style={styles.signupLink}>Sign Up</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0D2A2F',
+  },
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    paddingTop: 14,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${colors.primary}40`,
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF22',
+    borderWidth: 1,
+    borderColor: '#FFFFFF33',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  logoImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F7F2E8',
+  },
+  brandText: {
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  brandSubtext: {
+    fontSize: 12,
+    color: '#DCCDB8',
+    marginTop: 2,
+  },
+  formCard: {
+    backgroundColor: '#FFFCF5',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E7DBC7',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
-    color: colors.secondary,
-    marginBottom: 8,
+    color: colors.foreground,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.mutedForeground,
-    textAlign: 'center',
-  },
-  form: {
-    width: '100%',
+    marginTop: 6,
+    marginBottom: 18,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.foreground,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -240,16 +257,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
-    backgroundColor: colors.card,
-    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
-    fontSize: 16,
+    paddingVertical: 12,
+    fontSize: 15,
     color: colors.foreground,
   },
   inputError: {
@@ -258,73 +275,35 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.destructive,
     fontSize: 12,
-    marginTop: 6,
+    marginTop: 5,
   },
   forgotPasswordRow: {
     alignItems: 'flex-end',
-    marginBottom: 24,
+    marginBottom: 14,
   },
   forgotPasswordLink: {
     color: colors.secondary,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   loginButton: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   loginButtonDisabled: {
     opacity: 0.6,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#243036',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    color: colors.mutedForeground,
-    fontSize: 14,
-    marginHorizontal: 16,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginBottom: 12,
-    backgroundColor: colors.card,
-    gap: 10,
-  },
-  socialButtonText: {
-    color: colors.foreground,
-    fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   signupContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 16,
   },
   signupText: {
     color: colors.mutedForeground,
@@ -333,6 +312,6 @@ const styles = StyleSheet.create({
   signupLink: {
     color: colors.secondary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

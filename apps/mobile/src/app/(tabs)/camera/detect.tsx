@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Href } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../../lib/apiClient';
 
 interface DetectedFood {
@@ -167,6 +168,9 @@ export default function FoodDetectionScreen() {
     return (
       <View style={styles.container}>
         <Image source={{ uri: photoUrl }} style={styles.photo} />
+        <TouchableOpacity style={styles.backButtonOverlay} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loadingText}>Analyzing photo...</Text>
@@ -177,6 +181,9 @@ export default function FoodDetectionScreen() {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.backButtonOverlay} onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+      </TouchableOpacity>
       <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
 
       <View style={styles.content}>
@@ -317,6 +324,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 48,
+    left: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#00000066',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ffffff33',
   },
   photo: {
     width: '100%',

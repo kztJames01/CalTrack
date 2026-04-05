@@ -4,248 +4,185 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
+  SafeAreaView,
+  Image,
 } from 'react-native';
 import { useRouter, Href } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../styles/theme';
 
-const { width, height } = Dimensions.get('window');
+const savorSymbol = require('../../../assets/images/branding/savor-symbol.png');
 
 export default function WelcomeScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
-      {/* Background with gradient */}
-      <View style={styles.topSection}>
-        <View style={styles.backgroundDecoration}>
-          {/* Decorative circles */}
-          <View style={[styles.circle, styles.circle1]} />
-          <View style={[styles.circle, styles.circle2]} />
-          <View style={[styles.circle, styles.circle3]} />
-        </View>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={['#0D2A2F', '#134047', '#1B525A']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBackground}
+      >
+        <View style={styles.glowLarge} />
+        <View style={styles.glowSmall} />
 
-        {/* Food calorie labels */}
-        <View style={styles.calorieLabels}>
-          <View style={[styles.calorieTag, { top: height * 0.12, left: 30 }]}>
-            <Text style={styles.calorieTagText}>132 Kcal</Text>
-          </View>
-          <View style={[styles.calorieTag, { top: height * 0.22, left: 20 }]}>
-            <Text style={styles.calorieTagText}>504 Kcal</Text>
-          </View>
-          <View style={[styles.calorieTag, { top: height * 0.30, right: 40 }]}>
-            <Text style={styles.calorieTagText}>320 Kcal</Text>
-          </View>
-        </View>
-
-        {/* Logo & title */}
-        <View style={styles.brandingContainer}>
-          <View style={styles.logoRow}>
-            <Ionicons name="leaf" size={28} color={colors.secondary} />
-            <Text style={styles.brandName}>CalTrack</Text>
-          </View>
-          <View style={styles.accentBar} />
-        </View>
-
-        {/* Hero text */}
-        <View style={styles.heroContainer}>
-          <Text style={styles.heroText}>
-            Your Daily{'\n'}Guide{'\n'}to{' '}
-            <View style={styles.smarterBadge}>
-              <Ionicons name="flame" size={20} color="#FFFFFF" />
+        <View style={styles.contentContainer}>
+          <View style={styles.brandRow}>
+            <View style={styles.logoBadge}>
+              <Image source={savorSymbol} style={styles.logoImage} resizeMode="contain" />
             </View>
-            {' '}Smarter{'\n'}Eating.
-          </Text>
-        </View>
-      </View>
-
-      {/* Bottom CTA */}
-      <View style={styles.bottomSection}>
-        <TouchableOpacity
-          style={styles.getStartedButton}
-          onPress={() => router.push('/auth/signup' as Href)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.getStartedInner}>
-            <View style={styles.arrowCircle}>
-              <Ionicons name="chevron-forward" size={20} color={colors.secondary} />
+            <View>
+              <Text style={styles.brandText}>Savor</Text>
+              <Text style={styles.brandSubtext}>AI Calorie Tracker</Text>
             </View>
-            <Text style={styles.getStartedText}>Get Started</Text>
+          </View>
+
+          <View style={styles.heroCopyContainer}>
+            <Text style={styles.heroTitle}>Your Daily Guide to Smarter Eating</Text>
+            <Text style={styles.heroDescription}>
+              Track calories, macros, and meals in one place. Build healthier habits
+              with a clean nutrition dashboard designed for momentum.
+            </Text>
+          </View>
+
+          <View style={styles.ctaContainer}>
             <TouchableOpacity
-              style={styles.checkCircle}
-              onPress={() => router.push('/auth/login' as Href)}
-              activeOpacity={0.7}
+              style={styles.getStartedButton}
+              onPress={() => router.push('/auth/signup' as Href)}
+              activeOpacity={0.85}
             >
-              <Ionicons name="checkmark" size={20} color={colors.secondary} />
+              <Text style={styles.getStartedText}>Get Started</Text>
+              <Text style={styles.getStartedArrow}>→</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/auth/login' as Href)}
+              style={styles.loginButton}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.loginButtonText}>Already have an account? Log In</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => router.push('/auth/login' as Href)}
-          style={styles.existingAccountButton}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.existingAccountText}>
-            Already have an account? <Text style={styles.loginLinkText}>Log In</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        </View>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0D2A2F',
   },
-  topSection: {
+  gradientBackground: {
     flex: 1,
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    overflow: 'hidden',
   },
-  backgroundDecoration: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  circle: {
+  glowLarge: {
     position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: `${colors.primary}18`,
-  },
-  circle1: {
     width: 300,
     height: 300,
-    top: -80,
+    borderRadius: 150,
+    backgroundColor: '#D9A36A33',
+    top: -60,
     right: -100,
   },
-  circle2: {
-    width: 200,
-    height: 200,
-    top: 180,
-    left: -60,
-  },
-  circle3: {
-    width: 150,
-    height: 150,
-    bottom: 40,
-    right: -30,
-  },
-  calorieLabels: {
+  glowSmall: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: '#FFFFFF1A',
+    bottom: 120,
+    left: -70,
   },
-  calorieTag: {
-    position: 'absolute',
-    backgroundColor: colors.card,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 30,
+    justifyContent: 'space-between',
   },
-  calorieTagText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.foreground,
-  },
-  brandingContainer: {
-    marginBottom: 40,
-    zIndex: 1,
-  },
-  logoRow: {
+  brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  brandName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.secondary,
-  },
-  accentBar: {
-    width: 48,
-    height: 4,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
-    marginTop: 12,
-  },
-  heroContainer: {
-    zIndex: 1,
-    marginTop: 20,
-  },
-  heroText: {
-    fontSize: 42,
-    fontWeight: '700',
-    color: colors.foreground,
-    lineHeight: 52,
-    letterSpacing: -0.5,
-  },
-  smarterBadge: {
-    backgroundColor: colors.secondary,
-    borderRadius: 12,
-    width: 28,
-    height: 28,
+  logoBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F8F3E8',
+    borderWidth: 1,
+    borderColor: '#FFFFFF33',
   },
-  bottomSection: {
-    padding: 24,
-    paddingBottom: 48,
+  logoImage: {
+    width: 38,
+    height: 38,
+  },
+  brandText: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  brandSubtext: {
+    marginTop: 2,
+    fontSize: 13,
+    color: '#DCCDB8',
+    letterSpacing: 0.2,
+  },
+  heroCopyContainer: {
+    marginTop: 36,
+  },
+  heroTitle: {
+    fontSize: 44,
+    lineHeight: 50,
+    fontWeight: '700',
+    color: '#F7F1E7',
+    letterSpacing: -1,
+  },
+  heroDescription: {
+    marginTop: 18,
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#D8E0DE',
+    maxWidth: 340,
+  },
+  ctaContainer: {
+    gap: 14,
   },
   getStartedButton: {
     backgroundColor: colors.primary,
-    borderRadius: 50,
-    overflow: 'hidden',
-  },
-  getStartedInner: {
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-  },
-  arrowCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   getStartedText: {
-    fontSize: 17,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#243036',
+  },
+  getStartedArrow: {
+    fontSize: 22,
+    color: '#243036',
     fontWeight: '600',
-    color: colors.foreground,
   },
-  checkCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.card,
-    justifyContent: 'center',
+  loginButton: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFFFFF33',
+    paddingVertical: 14,
     alignItems: 'center',
   },
-  existingAccountButton: {
-    alignItems: 'center',
-    marginTop: 16,
-    paddingVertical: 8,
-  },
-  existingAccountText: {
-    fontSize: 14,
-    color: colors.mutedForeground,
-  },
-  loginLinkText: {
-    color: colors.secondary,
+  loginButtonText: {
+    color: '#E8EFED',
+    fontSize: 15,
     fontWeight: '600',
   },
 });

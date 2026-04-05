@@ -46,7 +46,7 @@ export default function CameraScreen() {
     if (!permission) {
       Alert.alert(
         'Camera Permission Required',
-        'CalTrack needs access to your camera to capture food photos for nutritional analysis.',
+        'Savor needs access to your camera to capture food photos for nutritional analysis.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Open Settings', onPress: () => {
@@ -114,7 +114,7 @@ export default function CameraScreen() {
       const { photoUrl } = response.data;
 
       // Navigate to food detection screen with photo URL
-      router.push(`/(tabs)/camera?photoUrl=${encodeURIComponent(photoUrl)}` as Href);
+      router.push(`/(tabs)/camera/detect?photoUrl=${encodeURIComponent(photoUrl)}` as Href);
     } catch (error) {
       console.error('Failed to upload photo:', error);
       Alert.alert('Upload Failed', 'Failed to upload photo. Please try again.');
