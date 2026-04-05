@@ -1,9 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Redis } from 'ioredis';
-import { firstValueFrom } from 'rxjs';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import {
   NutritionixFood,
@@ -22,7 +20,6 @@ export class NutritionService {
   private visionClient: ImageAnnotatorClient;
 
   constructor(
-    private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
   ) {
@@ -46,19 +43,17 @@ export class NutritionService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<NutritionixSearchResponse>(
-          `${this.nutritionixBaseUrl}/search/instant`,
-          {
-            params: { query },
-            headers: this.getNutritionixHeaders(),
-          },
-        ),
+      const response = await this.nutritionixRequest<NutritionixSearchResponse>(
+        '/search/instant',
+        {
+          method: 'GET',
+          params: { query },
+        },
       );
 
       const foods = [
-        ...response.data.common.slice(0, limit / 2),
-        ...response.data.branded.slice(0, limit / 2),
+        ...response.common.slice(0, limit / 2),
+        ...response.branded.slice(0, limit / 2),
       ].slice(0, limit);
 
       // Cache results
@@ -85,21 +80,19 @@ export class NutritionService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<{ foods: NutritionixFood[] }>(
-          `${this.nutritionixBaseUrl}/search/item`,
-          {
-            params: { upc: barcode },
-            headers: this.getNutritionixHeaders(),
-          },
-        ),
+      const response = await this.nutritionixRequest<{ foods: NutritionixFood[] }>(
+        '/search/item',
+        {
+          method: 'GET',
+          params: { upc: barcode },
+        },
       );
 
-      if (!response.data.foods || response.data.foods.length === 0) {
+      if (!response.foods || response.foods.length === 0) {
         throw new HttpException('Food not found', HttpStatus.NOT_FOUND);
       }
 
-      const food = response.data.foods[0];
+      const food = response.foods[0];
 
       // Cache result
       await this.redis.set(cacheKey, JSON.stringify(food), 'EX', this.cacheTTL);
@@ -128,19 +121,19 @@ export class NutritionService {
     }
 
     try {
-      const response = await firstValueFrom(
-        this.httpService.post<NutritionixNutrientsResponse>(
-          `${this.nutritionixBaseUrl}/natural/nutrients`,
-          { query: foodName },
-          { headers: this.getNutritionixHeaders() },
-        ),
+      const response = await this.nutritionixRequest<NutritionixNutrientsResponse>(
+        '/natural/nutrients',
+        {
+          method: 'POST',
+          body: { query: foodName },
+        },
       );
 
-      if (!response.data.foods || response.data.foods.length === 0) {
+      if (!response.foods || response.foods.length === 0) {
         throw new HttpException('Food not found', HttpStatus.NOT_FOUND);
       }
 
-      const food = response.data.foods[0];
+      const food = response.foods[0];
 
       // Cache result
       await this.redis.set(cacheKey, JSON.stringify(food), 'EX', this.cacheTTL);
@@ -238,11 +231,49 @@ export class NutritionService {
   }
 
   private getNutritionixHeaders() {
+    const appId = this.configService.get<string>('nutritionix.appId');
+    const apiKey = this.configService.get<string>('nutritionix.apiKey');
+    if (!appId || !apiKey) {
+      throw new HttpException(
+        'Nutritionix API credentials are not configured',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
     return {
-      'x-app-id': this.configService.get<string>('nutritionix.appId'),
-      'x-app-key': this.configService.get<string>('nutritionix.apiKey'),
+      'x-app-id': appId,
+      'x-app-key': apiKey,
       'Content-Type': 'application/json',
     };
+  }
+
+  private async nutritionixRequest<T>(
+    path: string,
+    options: {
+      method: 'GET' | 'POST';
+      params?: Record<string, string | number>;
+      body?: unknown;
+    },
+  ): Promise<T> {
+    const url = new URL(`${this.nutritionixBaseUrl}${path}`);
+    if (options.params) {
+      for (const [key, value] of Object.entries(options.params)) {
+        url.searchParams.set(key, String(value));
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      method: options.method,
+      headers: this.getNutritionixHeaders(),
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Nutritionix request failed (${response.status}): ${errorBody}`);
+    }
+
+    return (await response.json()) as T;
   }
 
   private isFoodRelated(label: string): boolean {
