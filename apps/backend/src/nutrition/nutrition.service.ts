@@ -9,7 +9,9 @@ import {
   NutritionixNutrientsResponse,
   VisionLabel,
   FoodDetectionResult,
+  LocalizedObjectBox,
 } from './interfaces/nutrition.interface';
+import { MlTrainingExportService } from './ml-training-export.service';
 
 @Injectable()
 export class NutritionService {
@@ -22,6 +24,7 @@ export class NutritionService {
   constructor(
     private readonly configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
+    private readonly mlTrainingExport: MlTrainingExportService,
   ) {
     // Initialize Google Cloud Vision only if credentials are provided
     const credentialsPath = this.configService.get<string>('googleCloud.credentials');
@@ -151,7 +154,79 @@ export class NutritionService {
     }
   }
 
+  toAnalyzePhotoApiBody(result: FoodDetectionResult) {
+    const detectedFoods = result.topFoods
+      .filter((f) => f.nutrition)
+      .map((tf) => ({
+        foodName: tf.name,
+        confidence: tf.confidence,
+        servingSize: tf.nutrition!.serving_qty,
+        servingUnit: tf.nutrition!.serving_unit,
+        calories: tf.nutrition!.nf_calories,
+        protein: tf.nutrition!.nf_protein,
+        carbs: tf.nutrition!.nf_total_carbohydrate,
+        fat: tf.nutrition!.nf_total_fat,
+      }));
+    return {
+      detectedFoods,
+      labels: result.labels,
+      localizedObjects: result.localizedObjects,
+      topFoods: result.topFoods,
+      detectionSource: result.detectionSource,
+    };
+  }
+
   async analyzeFoodPhoto(imageUrl: string): Promise<FoodDetectionResult> {
+    const primary = this.configService.get<string>('ml.photoPrimary') || 'google_vision';
+    const fallback = this.configService.get<string>('ml.photoFallback') || 'google_vision';
+
+    if (primary === 'on_device') {
+      const onDev = await this.tryOnDeviceFoodDetect(imageUrl);
+      if (onDev) {
+        return onDev;
+      }
+      if (fallback === 'google_vision') {
+        return this.analyzeWithGoogleVision(imageUrl);
+      }
+      throw new HttpException(
+        'On-device food model not wired yet',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    const fromVision = await this.analyzeWithGoogleVision(imageUrl);
+    if (fallback === 'on_device' && fromVision.topFoods.length === 0) {
+      const onDev = await this.tryOnDeviceFoodDetect(imageUrl);
+      if (onDev) {
+        return onDev;
+      }
+    }
+    return fromVision;
+  }
+
+  // hook for tflite worker or later; returns null until you plug it in
+  private async tryOnDeviceFoodDetect(_imageUrl: string): Promise<FoodDetectionResult | null> {
+    return null;
+  }
+
+  private verticesToYoloNorm(
+    vertices: { x?: number | null; y?: number | null }[],
+  ): { cx: number; cy: number; w: number; h: number } {
+    const xs = vertices.map((v) => v.x ?? 0).filter((x) => x >= 0);
+    const ys = vertices.map((v) => v.y ?? 0).filter((y) => y >= 0);
+    if (xs.length === 0 || ys.length === 0) {
+      return { cx: 0, cy: 0, w: 0, h: 0 };
+    }
+    const xmin = Math.min(...xs);
+    const xmax = Math.max(...xs);
+    const ymin = Math.min(...ys);
+    const ymax = Math.max(...ys);
+    const w = Math.max(0, xmax - xmin);
+    const h = Math.max(0, ymax - ymin);
+    return { cx: xmin + w / 2, cy: ymin + h / 2, w, h };
+  }
+
+  private async analyzeWithGoogleVision(imageUrl: string): Promise<FoodDetectionResult> {
     if (!this.visionClient) {
       throw new HttpException(
         'Vision API not configured',
@@ -159,34 +234,49 @@ export class NutritionService {
       );
     }
 
-    const cacheKey = `${this.cacheKeyPrefix}photo:${imageUrl}`;
-
-    // Check cache
+    const cacheKey = `${this.cacheKeyPrefix}photo:v3:${imageUrl}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for photo analysis: ${imageUrl}`);
-      return JSON.parse(cached);
+      return JSON.parse(cached) as FoodDetectionResult;
     }
 
     try {
-      // Detect labels in the image
-      const [result] = await this.visionClient.labelDetection(imageUrl);
-      const labels = result.labelAnnotations || [];
+      const [annotate] = await this.visionClient.annotateImage({
+        image: { source: { imageUri: imageUrl } },
+        features: [
+          { type: 'LABEL_DETECTION', maxResults: 30 },
+          { type: 'OBJECT_LOCALIZATION', maxResults: 20 },
+        ],
+      });
 
-      const visionLabels: VisionLabel[] = labels
-        .filter((label) => label.description && label.score !== null && label.score !== undefined)
+      const labelRows = annotate.labelAnnotations || [];
+      const visionLabels: VisionLabel[] = labelRows
+        .filter((label) => label.description && label.score != null)
         .map((label) => ({
           description: label.description!,
           score: label.score!,
         }));
 
-      // Filter food-related labels (score > 0.7)
+      const localizedRaw = annotate.localizedObjectAnnotations || [];
+      const localizedObjects: LocalizedObjectBox[] = localizedRaw
+        .filter((lo) => lo.name && lo.score != null)
+        .map((lo) => {
+          const verts = lo.boundingPoly?.normalizedVertices || [];
+          const yoloNormBox = this.verticesToYoloNorm(verts);
+          return {
+            name: lo.name!,
+            score: lo.score!,
+            yoloNormBox,
+          };
+        })
+        .filter((o) => o.yoloNormBox.w > 0.01 && o.yoloNormBox.h > 0.01);
+
       const foodLabels = visionLabels
         .filter((label) => label.score > 0.7)
         .filter((label) => this.isFoodRelated(label.description))
         .slice(0, 5);
 
-      // Get nutrition data for top detected foods
       const topFoods = await Promise.all(
         foodLabels.slice(0, 3).map(async (label) => {
           try {
@@ -196,7 +286,7 @@ export class NutritionService {
               confidence: label.score,
               nutrition,
             };
-          } catch (error) {
+          } catch {
             this.logger.warn(`Could not get nutrition for ${label.description}`);
             return {
               name: label.description,
@@ -209,17 +299,24 @@ export class NutritionService {
 
       const detectionResult: FoodDetectionResult = {
         labels: visionLabels,
-        topFoods: topFoods.filter((f) => f.nutrition !== null),
+        localizedObjects,
+        topFoods: topFoods.filter((f) => f.nutrition !== null) as FoodDetectionResult['topFoods'],
+        detectionSource: 'google_vision',
       };
 
-      // Cache result
-      await this.redis.set(
-        cacheKey,
-        JSON.stringify(detectionResult),
-        'EX',
-        this.cacheTTL,
-      );
+      this.mlTrainingExport.queueExport({
+        imageUrl,
+        capturedAt: new Date().toISOString(),
+        source: 'google_vision',
+        labels: visionLabels.map((l) => ({ description: l.description, score: l.score })),
+        localizedObjects: localizedObjects.map((o) => ({
+          name: o.name,
+          score: o.score,
+          yoloNormBox: o.yoloNormBox,
+        })),
+      });
 
+      await this.redis.set(cacheKey, JSON.stringify(detectionResult), 'EX', this.cacheTTL);
       return detectionResult;
     } catch (error) {
       this.logger.error(`Vision API error: ${error}`);

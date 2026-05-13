@@ -37,6 +37,19 @@ export default () => ({
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
     credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS,
   },
+  sentry: {
+    dsn: process.env.SENTRY_DSN,
+  },
+  // dev: ML_PHOTO_PRIMARY=google_vision ML_PHOTO_FALLBACK=on_device (yolo stub -> vision)
+  // prod: ML_PHOTO_PRIMARY=on_device ML_PHOTO_FALLBACK=google_vision after you ship tflite
+  ml: {
+    photoPrimary: process.env.ML_PHOTO_PRIMARY || 'google_vision',
+    photoFallback: process.env.ML_PHOTO_FALLBACK || 'google_vision',
+    exportTrainingSamples:
+      process.env.ML_EXPORT_TRAINING_SAMPLES === '1' ||
+      process.env.ML_EXPORT_TRAINING_SAMPLES === 'true',
+    trainingExportDir: process.env.ML_TRAINING_EXPORT_DIR || '',
+  },
   aws: {
     s3: {
       bucket: process.env.AWS_S3_BUCKET,

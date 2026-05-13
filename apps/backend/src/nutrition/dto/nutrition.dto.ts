@@ -11,6 +11,11 @@ export class SearchFoodDto {
 }
 
 export class AnalyzePhotoDto {
+  @IsOptional()
   @IsString()
-  imageUrl: string;
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  photoUrl?: string;
 }

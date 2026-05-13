@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -33,6 +34,11 @@ export class NutritionController {
 
   @Post('analyze-photo')
   async analyzePhoto(@Body() analyzeDto: AnalyzePhotoDto) {
-    return this.nutritionService.analyzeFoodPhoto(analyzeDto.imageUrl);
+    const imageUrl = analyzeDto.imageUrl ?? analyzeDto.photoUrl;
+    if (!imageUrl?.trim()) {
+      throw new BadRequestException('imageUrl or photoUrl is required');
+    }
+    const result = await this.nutritionService.analyzeFoodPhoto(imageUrl.trim());
+    return this.nutritionService.toAnalyzePhotoApiBody(result);
   }
 }

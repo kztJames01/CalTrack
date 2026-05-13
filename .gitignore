@@ -40,6 +40,9 @@ yarn-error.log*
 # Docker
 docker-compose.override.yml
 
+# ML pseudo-labels from Google Vision (dev dataset)
+var/ml-training-exports/
+
 # Uploads
 uploads/
 *.log

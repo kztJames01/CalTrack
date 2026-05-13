@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from '@nestjs-modules/ioredis';
@@ -12,10 +14,10 @@ import { SyncModule } from './sync/sync.module';
 import configuration from './config/configuration';
 import { User, UserProfile, UserGoals, Meal, FoodItem } from './database/entities';
 import { Throttle, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -54,6 +56,10 @@ import { APP_GUARD } from '@nestjs/core';
     SyncModule,
   ],
   controllers: [AppController],
-  providers: [AppService, {provide: APP_GUARD, useClass: ThrottlerGuard}],
+  providers: [
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

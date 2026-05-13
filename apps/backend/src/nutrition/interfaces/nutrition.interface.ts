@@ -33,11 +33,19 @@ export interface VisionLabel {
   score: number;
 }
 
+export interface LocalizedObjectBox {
+  name: string;
+  score: number;
+  yoloNormBox: { cx: number; cy: number; w: number; h: number };
+}
+
 export interface FoodDetectionResult {
   labels: VisionLabel[];
+  localizedObjects: LocalizedObjectBox[];
   topFoods: Array<{
     name: string;
     confidence: number;
     nutrition?: NutritionixFood;
   }>;
+  detectionSource: 'google_vision' | 'on_device';
 }
