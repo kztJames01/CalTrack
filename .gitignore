@@ -1,4 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
 node_modules
@@ -80,10 +79,6 @@ web-build/
 
 archived/
 
-PHASE3_COMPLETE.md
-ARCHITECTURE.md
-QUICKSTART.md
-API.md
-PHASE2_COMPLETE.md
-SOCIAL_AUTH_SETUP.md
-*.md
+docs/
+
+.devcontainer/
