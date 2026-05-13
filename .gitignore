@@ -87,3 +87,5 @@ API.md
 PHASE2_COMPLETE.md
 SOCIAL_AUTH_SETUP.md
 *.md
+
+.devcontainer/
