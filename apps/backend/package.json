@@ -20,8 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.986.0",
-    "@aws-sdk/s3-request-presigner": "^3.986.0",
+    "@aws-sdk/client-s3": "^3.995.0",
+    "@aws-sdk/s3-request-presigner": "^3.995.0",
     "@google-cloud/vision": "^5.3.4",
     "@nestjs-modules/ioredis": "^2.2.1",
     "@nestjs/common": "^11.0.1",
@@ -42,6 +42,9 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "helmet": "^8.2.0",
     "ioredis": "^5.9.2",
     "multer": "^2.0.2",
     "passport": "^0.7.0",
@@ -88,6 +91,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!uuid)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

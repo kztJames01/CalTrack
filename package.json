@@ -6,11 +6,13 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
-    "turbo": "^2.8.3",
+    "turbo": "^2.9.14",
     "typescript": "5.9.2"
   },
   "engines": {
@@ -25,7 +27,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-test-renderer": "19.1.0",
-    "@types/react": "19.1.0",
+    "@types/react": "~19.1.10",
     "lodash": "^4.17.21",
     "picomatch": "^2.3.2",
     "@angular-devkit/core": "19.2.23",
@@ -38,13 +40,34 @@
       "@angular-devkit/core": "19.2.23",
       "@angular-devkit/schematics": "19.2.23",
       "@angular-devkit/schematics-cli": "19.2.23"
+    },
+    "qs": ">=6.14.2",
+    "semver": ">=7.6.3",
+    "tar": ">=7.5.11",
+    "uuid": ">=11.1.1",
+    "protobufjs": ">=7.4.0",
+    "@protobufjs/utf8": ">=1.1.1",
+    "fast-uri": ">=3.1.2",
+    "fast-xml-parser": ">=5.7.0",
+    "brace-expansion": "1.1.12",
+    "minimatch": "9.0.5",
+    "xml2js": ">=0.6.2",
+    "@xmldom/xmldom": ">=0.9.0",
+    "body-parser": ">=1.20.3",
+    "send": ">=0.19.0",
+    "postcss": "8.5.10",
+    "@expo/metro-config@54.0.16": {
+      "postcss": "8.5.10"
     }
   },
   "dependencies": {
     "@apple/app-store-server-library": "^2.0.0",
+    "@nestjs/platform-express": "^11.1.19",
     "@types/passport-google-oauth20": "^2.0.17",
     "apple-signin-auth": "^2.0.0",
+    "express": "^4.22.2",
     "google-auth-library": "^10.5.0",
     "passport-google-oauth20": "^2.0.0"
-  }
+  },
+  "version": "1.0.0"
 }
