@@ -3,14 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Meal, FoodItem } from '../database/entities';
 import { CreateMealDto, UpdateMealDto, QueryMealsDto } from './dto/meal.dto';
+import { CacheService } from '../common/cache/cache.service';
 
 @Injectable()
 export class MealsService {
+  private readonly dailyCacheTtl = 300;
+
   constructor(
     @InjectRepository(Meal)
     private mealRepository: Repository<Meal>,
     @InjectRepository(FoodItem)
     private foodItemRepository: Repository<FoodItem>,
+    private cacheService: CacheService,
   ) {}
 
   async create(userId: string, createMealDto: CreateMealDto): Promise<Meal> {
@@ -37,6 +41,8 @@ export class MealsService {
     );
 
     await this.foodItemRepository.save(foodItemEntities);
+
+    await this.invalidateDailyCache(userId, createMealDto.eatenAt);
 
     // Return meal with food items
     return this.findOne(userId, savedMeal.id);
@@ -140,15 +146,21 @@ export class MealsService {
 
     await this.mealRepository.save(meal);
 
+    await this.invalidateDailyCache(userId, meal.eatenAt.toISOString());
+
     return this.findOne(userId, id);
   }
 
   async remove(userId: string, id: string): Promise<void> {
     const meal = await this.findOne(userId, id);
     await this.mealRepository.remove(meal);
+    await this.invalidateDailyCache(userId, meal.eatenAt.toISOString());
   }
 
   async getDailyTotals(userId: string, date: string) {
+    const cacheKey = `meals:daily:${userId}:${date}`;
+    const cached = await this.cacheService.get<any>(cacheKey);
+    if (cached) return cached;
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -178,7 +190,18 @@ export class MealsService {
       totals.fat += Number(meal.totalFat);
     });
 
-    return {
+    const result = this.finishDailyTotals(date, totals, meals);
+    await this.cacheService.set(cacheKey, result, this.dailyCacheTtl);
+    return result;
+  }
+
+  private async invalidateDailyCache(userId: string, eatenAt: string) {
+    const day = eatenAt.slice(0, 10);
+    await this.cacheService.del(`meals:daily:${userId}:${day}`);
+  }
+
+  private finishDailyTotals(date: string, totals: any, meals: Meal[]) {
+    const result = {
       date,
       totals,
       meals: meals.map((meal) => ({
@@ -191,6 +214,7 @@ export class MealsService {
         fat: meal.totalFat,
       })),
     };
+    return result;
   }
 
   private calculateTotals(foodItems: any[]) {
