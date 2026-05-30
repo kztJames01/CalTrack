@@ -63,6 +63,7 @@ Thumbs.db
 # Expo
 .expo/
 .expo-shared/
+/app.json
 
 # React Native
 *.jks
