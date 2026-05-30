@@ -55,7 +55,7 @@ export default function StatisticsScreen() {
           : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
       const results = await mealCollection
-        .query(Q.where('meal_date', Q.gte(startDate.getTime())))
+        .query(Q.where('date', Q.gte(startDate.getTime())))
         .fetch();
 
       // Aggregate by day of week

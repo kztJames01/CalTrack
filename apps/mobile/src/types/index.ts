@@ -1,12 +1,5 @@
-/**
- * CalTrack Mobile - Shared Type Definitions
- * Centralized interfaces and types for the mobile app
- */
-
-// ============================================================================
+//Shared types
 // User Types
-// ============================================================================
-
 export interface User {
   id: string;
   email: string;
@@ -45,9 +38,8 @@ export interface UserPreferences {
   goal: Goal;
 }
 
-// ============================================================================
 // Meal Types
-// ============================================================================
+
 
 export interface Meal {
   id: string;
@@ -69,11 +61,7 @@ export interface Meal {
 }
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-
-// ============================================================================
-// Food Item Types
-// ============================================================================
-
+//Food Item Types
 export interface FoodItem {
   id: string;
   mealId: string;
@@ -96,10 +84,7 @@ export interface FoodItem {
   updatedAt: Date;
 }
 
-// ============================================================================
 // Nutrition Types
-// ============================================================================
-
 export interface NutritionInfo {
   calories: number;
   protein: number;
@@ -121,10 +106,7 @@ export interface DailyTotals extends NutritionInfo {
   mealCount: number;
 }
 
-// ============================================================================
 // API Response Types
-// ============================================================================
-
 export interface FoodSearchResult {
   id?: string;
   name: string;
@@ -158,10 +140,7 @@ export interface DetectedFood {
   nutrition: NutritionInfo;
 }
 
-// ============================================================================
 // Sync Types
-// ============================================================================
-
 export interface SyncQueue {
   id: string;
   recordType: 'user' | 'meal' | 'foodItem';
@@ -180,10 +159,7 @@ export interface SyncChanges {
   lastSyncedAt: Date;
 }
 
-// ============================================================================
 // Auth Types
-// ============================================================================
-
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -204,10 +180,6 @@ export interface AuthResponse {
   user: User;
   tokens: AuthTokens;
 }
-
-// ============================================================================
-// Component Props Types
-// ============================================================================
 
 export interface FoodSearchProps {
   onSelect: (food: FoodSearchResult) => void;
@@ -260,11 +232,7 @@ export interface FoodItemCardProps {
   onEdit?: (foodItem: FoodItem) => void;
   onDelete?: (foodItemId: string) => void;
 }
-
-// ============================================================================
-// Form Types
-// ============================================================================
-
+//Form Types
 export interface LoginFormData {
   email: string;
   password: string;
@@ -292,11 +260,7 @@ export interface MacroGoalsFormData {
   carbsPercent: number;
   fatPercent: number;
 }
-
-// ============================================================================
-// Utility Types
-// ============================================================================
-
+//Utility Types
 export interface DateRange {
   start: Date;
   end: Date;
@@ -318,9 +282,7 @@ export interface PaginationOptions {
   limit: number;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
+  //Constants
 
 export const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 

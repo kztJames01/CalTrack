@@ -20,20 +20,21 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
+import { SocialAuthButtons } from '../../components/SocialAuthButtons';
 import { colors } from '../../styles/theme';
 
 const savorSymbol = require('../../../assets/images/branding/savor-symbol.png');
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, googleLogin, appleLogin, isLoading, clearError } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -53,8 +54,32 @@ export default function LoginScreen() {
       clearError();
       await login(data.email, data.password);
       router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Login Failed', error || 'An error occurred during login');
+    } catch (err: any) {
+      Alert.alert('Login Failed', err.message || 'An error occurred during login');
+    }
+  };
+
+  const handleGoogle = async () => {
+    try {
+      clearError();
+      await googleLogin();
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      if (!err.message?.includes('cancelled')) {
+        Alert.alert('Google Sign-In Failed', err.message || 'Could not sign in with Google');
+      }
+    }
+  };
+
+  const handleApple = async () => {
+    try {
+      clearError();
+      await appleLogin();
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      if (err?.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Apple Sign-In Failed', err.message || 'Could not sign in with Apple');
+      }
     }
   };
 
@@ -157,6 +182,13 @@ export default function LoginScreen() {
               >
                 {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.loginButtonText}>Log In</Text>}
               </TouchableOpacity>
+
+              <SocialAuthButtons
+                onGooglePress={handleGoogle}
+                onApplePress={handleApple}
+                disabled={isLoading}
+                loading={isLoading}
+              />
 
               <View style={styles.signupContainer}>
                 <Text style={styles.signupText}>Don't have an account? </Text>

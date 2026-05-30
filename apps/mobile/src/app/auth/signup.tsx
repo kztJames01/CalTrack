@@ -20,14 +20,24 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
+import { SocialAuthButtons } from '../../components/SocialAuthButtons';
 import { colors } from '../../styles/theme';
 
 const savorSymbol = require('../../../assets/images/branding/savor-symbol.png');
 
+const passwordRule =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+
 const signupSchema = z
   .object({
     email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(
+        passwordRule,
+        'Password needs upper, lower, number, and special character',
+      ),
     confirmPassword: z.string(),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().optional(),
@@ -41,7 +51,7 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupScreen() {
   const router = useRouter();
-  const { signup, isLoading, error, clearError } = useAuthStore();
+  const { signup, googleLogin, appleLogin, isLoading, clearError } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -65,8 +75,32 @@ export default function SignupScreen() {
       clearError();
       await signup(data.email, data.password, data.firstName, data.lastName);
       router.replace('/(tabs)');
-    } catch {
-      Alert.alert('Signup Failed', error || 'An error occurred during signup');
+    } catch (err: any) {
+      Alert.alert('Signup Failed', err.message || 'An error occurred during signup');
+    }
+  };
+
+  const handleGoogle = async () => {
+    try {
+      clearError();
+      await googleLogin();
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      if (!err.message?.includes('cancelled')) {
+        Alert.alert('Google Sign-In Failed', err.message || 'Could not sign up with Google');
+      }
+    }
+  };
+
+  const handleApple = async () => {
+    try {
+      clearError();
+      await appleLogin();
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      if (err?.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Apple Sign-In Failed', err.message || 'Could not sign up with Apple');
+      }
     }
   };
 
@@ -102,14 +136,11 @@ export default function SignupScreen() {
                     name="firstName"
                     render={({ field: { onChange, onBlur, value } }) => (
                       <View style={[styles.inputWrapper, errors.firstName && styles.inputError]}>
-                        <Ionicons name="person-outline" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
                         <TextInput
                           style={styles.input}
                           onBlur={onBlur}
                           onChangeText={onChange}
                           value={value}
-                          placeholder="First"
-                          placeholderTextColor={colors.mutedForeground}
                           autoCapitalize="words"
                           editable={!isLoading}
                         />
@@ -131,8 +162,6 @@ export default function SignupScreen() {
                           onBlur={onBlur}
                           onChangeText={onChange}
                           value={value}
-                          placeholder="Optional"
-                          placeholderTextColor={colors.mutedForeground}
                           autoCapitalize="words"
                           editable={!isLoading}
                         />
@@ -242,6 +271,13 @@ export default function SignupScreen() {
               >
                 {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.signupButtonText}>Sign Up</Text>}
               </TouchableOpacity>
+
+              <SocialAuthButtons
+                onGooglePress={handleGoogle}
+                onApplePress={handleApple}
+                disabled={isLoading}
+                loading={isLoading}
+              />
 
               <View style={styles.loginContainer}>
                 <Text style={styles.loginText}>Already have an account? </Text>

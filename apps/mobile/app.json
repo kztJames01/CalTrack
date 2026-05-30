@@ -15,7 +15,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile"
+      "bundleIdentifier": "com.anonymous.mobile",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -32,10 +33,21 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      ["expo-router", {
-        "root": "./src/app"
-      }],
-      "@sentry/react-native"
+      [
+        "expo-router",
+        {
+          "root": "./src/app"
+        }
+      ],
+      "@sentry/react-native",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.445926403883-2ck69oludnmuuk0uhbm7ehn0rhc0mh13"
+        }
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

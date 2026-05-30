@@ -1,6 +1,13 @@
 import * as SecureStore from 'expo-secure-store';
+import { getCached, setCached } from './cache';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+const GET_CACHE_TTL: Record<string, number> = {
+  '/nutrition/search': 300,
+  '/nutrition/barcode': 600,
+  '/meals/daily': 120,
+};
 
 type ApiMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -151,8 +158,19 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T = any>(path: string, config?: ApiRequestConfig) =>
-    request<T>('GET', path, undefined, config),
+  get: async <T = any>(path: string, config?: ApiRequestConfig) => {
+    const cacheTtl = GET_CACHE_TTL[path.split('?')[0]];
+    const cacheKey = path + JSON.stringify(config?.params || {});
+    if (cacheTtl) {
+      const hit = await getCached<T>(cacheKey);
+      if (hit) return { data: hit, status: 200 };
+    }
+    const res = await request<T>('GET', path, undefined, config);
+    if (cacheTtl) {
+      await setCached(cacheKey, res.data, cacheTtl);
+    }
+    return res;
+  },
   post: <T = any>(path: string, data?: unknown, config?: ApiRequestConfig) =>
     request<T>('POST', path, data, config),
   put: <T = any>(path: string, data?: unknown, config?: ApiRequestConfig) =>

@@ -58,9 +58,9 @@ export const useMealStore = create<MealState>((set, get) => ({
       const mealCollection = database.collections.get('meals') as any;
       const meals = await mealCollection
         .query(
-          Q.where('meal_date', Q.gte(startOfDay.getTime())),
-          Q.where('meal_date', Q.lte(endOfDay.getTime())),
-          Q.sortBy('meal_date', Q.asc)
+          Q.where('date', Q.gte(startOfDay.getTime())),
+          Q.where('date', Q.lte(endOfDay.getTime())),
+          Q.sortBy('date', Q.asc)
         )
         .fetch();
 
@@ -78,13 +78,14 @@ export const useMealStore = create<MealState>((set, get) => ({
     const meal = await database.write(async () => {
       return await mealCollection.create((m: any) => {
         m.userId = userId;
+        m.name = mealType;
         m.mealType = mealType;
-        m.mealDate = get().selectedDate;
+        m.date = get().selectedDate;
         m.totalCalories = 0;
         m.totalProtein = 0;
         m.totalCarbs = 0;
         m.totalFat = 0;
-        m.syncStatus = 'pending';
+        m.isSynced = false;
       });
     });
 
@@ -214,13 +215,14 @@ export const useMealStore = create<MealState>((set, get) => ({
       // Create new meal
       const newMeal = await mealCollection.create((m: any) => {
         m.userId = originalMeal.userId;
+        m.name = originalMeal.name;
         m.mealType = originalMeal.mealType;
-        m.mealDate = newDate;
+        m.date = newDate;
         m.totalCalories = originalMeal.totalCalories;
         m.totalProtein = originalMeal.totalProtein;
         m.totalCarbs = originalMeal.totalCarbs;
         m.totalFat = originalMeal.totalFat;
-        m.syncStatus = 'pending';
+        m.isSynced = false;
       });
 
       // Copy food items
