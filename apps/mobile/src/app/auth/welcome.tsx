@@ -1,42 +1,33 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AuthBrandHeader } from '../../components/AuthBrandHeader';
+import {
+  AUTH_GRADIENT,
+  AUTH_H_PAD,
+  authScreenStyles,
+} from '../../styles/authScreenStyles';
 import { colors } from '../../styles/theme';
-
-const savorSymbol = require('../../../assets/images/branding/savor-symbol.png');
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={authScreenStyles.screen}>
       <LinearGradient
-        colors={['#0D2A2F', '#134047', '#1B525A']}
+        colors={[...AUTH_GRADIENT]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradientBackground}
+        style={authScreenStyles.gradient}
       >
         <View style={styles.glowLarge} />
         <View style={styles.glowSmall} />
 
-        <View style={styles.contentContainer}>
-          <View style={styles.brandRow}>
-            <View style={styles.logoBadge}>
-              <Image source={savorSymbol} style={styles.logoImage} resizeMode="contain" />
-            </View>
-            <View>
-              <Text style={styles.brandText}>Savor</Text>
-              <Text style={styles.brandSubtext}>AI Calorie Tracker</Text>
-            </View>
-          </View>
+        <View style={[styles.topSection, { paddingTop: insets.top + 20 }]}>
+          <AuthBrandHeader />
 
           <View style={styles.heroCopyContainer}>
             <Text style={styles.heroTitle}>Your Daily Guide to Smarter Eating</Text>
@@ -45,39 +36,32 @@ export default function WelcomeScreen() {
               with a clean nutrition dashboard designed for momentum.
             </Text>
           </View>
+        </View>
 
-          <View style={styles.ctaContainer}>
-            <TouchableOpacity
-              style={styles.getStartedButton}
-              onPress={() => router.push('/auth/signup' as Href)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.getStartedText}>Get Started</Text>
-              <Text style={styles.getStartedArrow}>→</Text>
-            </TouchableOpacity>
+        <View style={[authScreenStyles.bottomCard, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity
+            style={styles.getStartedButton}
+            onPress={() => router.push('/auth/signup' as Href)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.getStartedText}>Get Started</Text>
+            <Text style={styles.getStartedArrow}>→</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => router.push('/auth/login' as Href)}
-              style={styles.loginButton}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.loginButtonText}>Already have an account? Log In</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/auth/login' as Href)}
+            style={styles.loginButton}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.loginButtonText}>Already have an account? Log In</Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#0D2A2F',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
   glowLarge: {
     position: 'absolute',
     width: 300,
@@ -96,43 +80,9 @@ const styles = StyleSheet.create({
     bottom: 120,
     left: -70,
   },
-  contentContainer: {
+  topSection: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 30,
-    justifyContent: 'space-between',
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  logoBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8F3E8',
-    borderWidth: 1,
-    borderColor: '#FFFFFF33',
-  },
-  logoImage: {
-    width: 38,
-    height: 38,
-  },
-  brandText: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  brandSubtext: {
-    marginTop: 2,
-    fontSize: 13,
-    color: '#DCCDB8',
-    letterSpacing: 0.2,
+    paddingHorizontal: AUTH_H_PAD,
   },
   heroCopyContainer: {
     marginTop: 36,
@@ -150,9 +100,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#D8E0DE',
     maxWidth: 340,
-  },
-  ctaContainer: {
-    gap: 14,
   },
   getStartedButton: {
     backgroundColor: colors.primary,
@@ -172,16 +119,19 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#243036',
     fontWeight: '600',
+    marginLeft: 8,
   },
   loginButton: {
+    marginTop: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#FFFFFF33',
+    borderColor: colors.border,
     paddingVertical: 14,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   loginButtonText: {
-    color: '#E8EFED',
+    color: colors.foreground,
     fontSize: 15,
     fontWeight: '600',
   },

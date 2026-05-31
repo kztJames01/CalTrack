@@ -28,13 +28,22 @@ export class GoogleAuthService {
 
   async verifyIdToken(idToken: string): Promise<GoogleTokenPayload> {
     const cacheKey = `oauth:google:${this.cacheService.hashKey(idToken)}`;
-    const cached = await this.cacheService.get<GoogleTokenPayload>(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = await this.cacheService.get<GoogleTokenPayload>(cacheKey);
+      if (cached) return cached;
+    } catch (err) {
+      this.logger.warn(`Google token cache read skipped: ${err.message}`);
+    }
+
+    const audiences = [
+      this.configService.get<string>('oauth.google.clientId'),
+      this.configService.get<string>('oauth.google.iosClientId'),
+    ].filter(Boolean) as string[];
 
     try {
       const ticket = await this.oauth2Client.verifyIdToken({
         idToken,
-        audience: this.configService.get<string>('oauth.google.clientId'),
+        audience: audiences.length === 1 ? audiences[0] : audiences,
       });
 
       const payload = ticket.getPayload();

@@ -1,7 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { getCached, setCached } from './cache';
+import { getApiBaseUrl } from './apiBaseUrl';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = getApiBaseUrl();
 
 const GET_CACHE_TTL: Record<string, number> = {
   '/nutrition/search': 300,
@@ -36,7 +37,9 @@ class ApiError extends Error {
 }
 
 function buildUrl(path: string, params?: ApiRequestConfig['params']): string {
-  const url = new URL(path, API_BASE_URL);
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const url = new URL(`${base}${normalizedPath}`);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -105,7 +108,13 @@ async function doFetch<T>(
     if (error?.name === 'AbortError') {
       throw new ApiError('Request timeout', undefined, config);
     }
-    throw new ApiError(error?.message || 'Network request failed', undefined, config);
+    throw new ApiError(
+      error?.message === 'Network request failed'
+        ? `Cannot reach API at ${API_BASE_URL}. Is the backend running?`
+        : error?.message || 'Network request failed',
+      undefined,
+      config,
+    );
   } finally {
     clearTimeout(timeoutId);
   }
