@@ -18,6 +18,7 @@
       "bundleIdentifier": "com.anonymous.mobile",
       "usesAppleSignIn": true,
       "infoPlist": {
+        "CFBundleDisplayName": "Savor",
         "NSCameraUsageDescription": "Savor uses your camera to scan barcodes and capture food photos for calorie tracking.",
         "NSPhotoLibraryUsageDescription": "Savor needs photo library access so you can pick food images to analyze.",
         "NSPhotoLibraryAddUsageDescription": "Savor can save food photos to your library when you choose to."

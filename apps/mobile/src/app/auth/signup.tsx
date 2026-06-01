@@ -103,6 +103,13 @@ export default function SignupScreen() {
       <Text style={authFormStyles.title}>Create Account</Text>
       <Text style={authFormStyles.subtitle}>Start your nutrition journey today.</Text>
 
+      <SocialAuthButtons
+        onGooglePress={handleGoogle}
+        onApplePress={handleApple}
+        disabled={isLoading}
+        loading={isLoading}
+      />
+
       <View style={styles.nameRow}>
         <View style={[authFormStyles.inputGroup, styles.nameInputLeft]}>
           <Text style={authFormStyles.label}>First Name</Text>
@@ -246,13 +253,6 @@ export default function SignupScreen() {
       >
         {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={authFormStyles.primaryButtonText}>Sign Up</Text>}
       </TouchableOpacity>
-
-      <SocialAuthButtons
-        onGooglePress={handleGoogle}
-        onApplePress={handleApple}
-        disabled={isLoading}
-        loading={isLoading}
-      />
 
       <View style={authFormStyles.footerRow}>
         <Text style={authFormStyles.footerText}>Already have an account? </Text>

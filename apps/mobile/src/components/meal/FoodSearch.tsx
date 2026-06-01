@@ -88,7 +88,7 @@ export default function FoodSearch({ onSelect, placeholder }: FoodSearchProps) {
       <View style={styles.nutritionSummary}>
         <Text style={styles.calories}>{item.calories} cal</Text>
         <Text style={styles.macros}>
-          P: {item.protein}g | C: {item.carbs}g | F: {item.fat}g
+          Protein: {item.protein}g | Carbs: {item.carbs}g | Fat: {item.fat}g
         </Text>
       </View>
     </TouchableOpacity>

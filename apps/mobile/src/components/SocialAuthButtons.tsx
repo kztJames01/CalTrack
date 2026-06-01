@@ -23,11 +23,7 @@ export function SocialAuthButtons({ onGooglePress, onApplePress, disabled, loadi
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or continue with</Text>
-        <View style={styles.dividerLine} />
-      </View>
+
 
       {loading ? (
         <ActivityIndicator color={colors.secondary} style={styles.loader} />
@@ -54,7 +50,13 @@ export function SocialAuthButtons({ onGooglePress, onApplePress, disabled, loadi
               <Text style={[styles.btnText, styles.appleText]}>Continue with Apple</Text>
             </TouchableOpacity>
           )}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
         </>
+
       )}
     </View>
   );
@@ -62,7 +64,7 @@ export function SocialAuthButtons({ onGooglePress, onApplePress, disabled, loadi
 
 const styles = StyleSheet.create({
   wrap: {
-    marginTop: 18,
+    marginBottom: 18,
     gap: 10,
   },
   dividerRow: {

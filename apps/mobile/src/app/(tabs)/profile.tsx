@@ -10,11 +10,17 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { useRouter, Href } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useUserStore, convertWeight, convertHeight } from '../../store/userStore';
 import { syncDatabase, getPendingSyncCount } from '../../database/sync';
+import { WheelPicker } from '../../components/WheelPicker';
+import { colors } from '../../styles/theme';
+
+const GENDERS = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+];
 
 const ACTIVITY_LEVELS = [
   { label: 'Sedentary (little or no exercise)', value: 'sedentary' },
@@ -227,18 +233,23 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-        {user && (
-          <Text style={styles.email}>{user.email}</Text>
-        )}
+        <View>
+          <Text style={styles.greeting}>Your account</Text>
+          <Text style={styles.title}>Profile</Text>
+        </View>
+        {user ? <Text style={styles.email}>{user.email}</Text> : null}
       </View>
 
       {/* Personal Information */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleInline]}>Personal Information</Text>
           {!isEditing && (
             <TouchableOpacity onPress={() => setIsEditing(true)}>
               <Text style={styles.editButton}>Edit</Text>
@@ -260,17 +271,12 @@ export default function ProfileScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Gender</Text>
-          <View style={[styles.pickerContainer, !isEditing && styles.inputDisabled]}>
-            <Picker
-              enabled={isEditing}
-              selectedValue={formGender}
-              onValueChange={setFormGender}
-              style={styles.picker}
-            >
-              <Picker.Item label="Male" value="male" />
-              <Picker.Item label="Female" value="female" />
-            </Picker>
-          </View>
+          <WheelPicker
+            value={formGender}
+            options={GENDERS}
+            onChange={setFormGender}
+            disabled={!isEditing}
+          />
         </View>
 
         <View style={styles.inputGroup}>
@@ -303,34 +309,22 @@ export default function ProfileScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Activity Level</Text>
-          <View style={[styles.pickerContainer, !isEditing && styles.inputDisabled]}>
-            <Picker
-              enabled={isEditing}
-              selectedValue={formActivityLevel}
-              onValueChange={setFormActivityLevel}
-              style={styles.picker}
-            >
-              {ACTIVITY_LEVELS.map((level) => (
-                <Picker.Item key={level.value} label={level.label} value={level.value} />
-              ))}
-            </Picker>
-          </View>
+          <WheelPicker
+            value={formActivityLevel}
+            options={ACTIVITY_LEVELS}
+            onChange={setFormActivityLevel}
+            disabled={!isEditing}
+          />
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Goal</Text>
-          <View style={[styles.pickerContainer, !isEditing && styles.inputDisabled]}>
-            <Picker
-              enabled={isEditing}
-              selectedValue={formGoal}
-              onValueChange={setFormGoal}
-              style={styles.picker}
-            >
-              {GOALS.map((g) => (
-                <Picker.Item key={g.value} label={g.label} value={g.value} />
-              ))}
-            </Picker>
-          </View>
+          <WheelPicker
+            value={formGoal}
+            options={GOALS}
+            onChange={setFormGoal}
+            disabled={!isEditing}
+          />
         </View>
 
         {isEditing && (
@@ -347,7 +341,7 @@ export default function ProfileScreen() {
               disabled={isSaving}
             >
               {isSaving ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.foreground} />
               ) : (
                 <Text style={styles.primaryButtonText}>Calculate Goals</Text>
               )}
@@ -406,7 +400,7 @@ export default function ProfileScreen() {
           disabled={isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.foreground} />
           ) : (
             <Text style={styles.primaryButtonText}>Update Macros</Text>
           )}
@@ -414,7 +408,7 @@ export default function ProfileScreen() {
 
         <View style={styles.goalSummary}>
           <Text style={styles.goalSummaryText}>
-            P: {proteinGoal}g | C: {carbsGoal}g | F: {fatGoal}g
+            Protein: {proteinGoal}g | Carbs: {carbsGoal}g | Fat: {fatGoal}g
           </Text>
         </View>
       </View>
@@ -430,8 +424,8 @@ export default function ProfileScreen() {
           <Switch
             value={preferredUnits === 'imperial'}
             onValueChange={toggleUnits}
-            trackColor={{ false: '#cbd5e1', true: '#2563eb' }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.muted, true: colors.secondary }}
+            thumbColor={colors.card}
           />
         </View>
       </View>
@@ -451,7 +445,7 @@ export default function ProfileScreen() {
           disabled={isSyncing}
         >
           {isSyncing ? (
-            <ActivityIndicator color="#334155" />
+            <ActivityIndicator color={colors.foreground} />
           ) : (
             <Text style={styles.syncButtonText}>Force Sync</Text>
           )}
@@ -475,7 +469,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>CalTrack v1.0.0</Text>
+        <Text style={styles.footerText}>Savor v1.0.0</Text>
       </View>
     </ScrollView>
   );
@@ -484,29 +478,39 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: 32,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    paddingBottom: 16,
+  },
+  greeting: {
+    fontSize: 14,
+    color: colors.mutedForeground,
+    marginBottom: 2,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.foreground,
   },
   email: {
-    fontSize: 16,
-    color: '#64748b',
+    fontSize: 14,
+    color: colors.mutedForeground,
+    marginTop: 6,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     padding: 20,
-    marginTop: 8,
+    marginBottom: 16,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -515,13 +519,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.foreground,
     marginBottom: 16,
   },
+  sectionTitleInline: {
+    marginBottom: 0,
+  },
   editButton: {
-    color: '#2563eb',
+    color: colors.secondary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -531,28 +538,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#334155',
+    color: colors.foreground,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.inputBackground,
+    color: colors.foreground,
   },
   inputDisabled: {
     opacity: 0.6,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
-  picker: {
-    height: 50,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -562,58 +561,64 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   primaryButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: colors.secondary,
   },
   primaryButtonText: {
-    color: '#fff',
+    color: colors.secondaryForeground,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   secondaryButton: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.muted,
   },
   secondaryButtonText: {
-    color: '#334155',
+    color: colors.foreground,
     fontSize: 16,
     fontWeight: '600',
   },
   goalCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   goalLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mutedForeground,
     marginBottom: 4,
   },
   goalValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2563eb',
+    color: colors.secondary,
   },
   macroTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#334155',
+    color: colors.foreground,
     marginBottom: 12,
   },
   goalSummary: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#f8fafc',
+    backgroundColor: colors.background,
     borderRadius: 8,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   goalSummaryText: {
     fontSize: 14,
-    color: '#64748b',
+    color: colors.mutedForeground,
   },
   preferenceRow: {
     flexDirection: 'row',
@@ -623,7 +628,7 @@ const styles = StyleSheet.create({
   },
   preferenceLabel: {
     fontSize: 16,
-    color: '#334155',
+    color: colors.foreground,
   },
   syncInfo: {
     flexDirection: 'row',
@@ -631,40 +636,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     padding: 16,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   syncLabel: {
     fontSize: 16,
-    color: '#64748b',
+    color: colors.mutedForeground,
   },
   syncValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2563eb',
+    color: colors.secondary,
   },
   syncButton: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: colors.muted,
   },
   syncButtonText: {
-    color: '#334155',
+    color: colors.foreground,
     fontSize: 16,
     fontWeight: '600',
   },
   logoutButton: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: colors.muted,
     marginBottom: 12,
   },
   logoutButtonText: {
-    color: '#334155',
+    color: colors.foreground,
     fontSize: 16,
     fontWeight: '600',
   },
   deleteButton: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
   deleteButtonText: {
-    color: '#dc2626',
+    color: colors.destructive,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -674,6 +681,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: colors.mutedForeground,
   },
 });

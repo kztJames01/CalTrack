@@ -82,6 +82,13 @@ export default function LoginScreen() {
       <Text style={authFormStyles.title}>Welcome Back</Text>
       <Text style={authFormStyles.subtitle}>Log in to continue tracking your meals.</Text>
 
+      <SocialAuthButtons
+        onGooglePress={handleGoogle}
+        onApplePress={handleApple}
+        disabled={isLoading}
+        loading={isLoading}
+      />
+
       <View style={authFormStyles.inputGroup}>
         <Text style={authFormStyles.label}>Email</Text>
         <Controller
@@ -157,13 +164,6 @@ export default function LoginScreen() {
       >
         {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={authFormStyles.primaryButtonText}>Log In</Text>}
       </TouchableOpacity>
-
-      <SocialAuthButtons
-        onGooglePress={handleGoogle}
-        onApplePress={handleApple}
-        disabled={isLoading}
-        loading={isLoading}
-      />
 
       <View style={authFormStyles.footerRow}>
         <Text style={authFormStyles.footerText}>Don't have an account? </Text>

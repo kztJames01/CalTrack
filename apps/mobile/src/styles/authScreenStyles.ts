@@ -21,18 +21,32 @@ export const authScreenStyles = StyleSheet.create({
     paddingHorizontal: AUTH_H_PAD,
     zIndex: 10,
   },
+  topSection: {
+    flex: 3,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  foodBg: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 0,
+  },
   backButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FFFFFF22',
+    backgroundColor: '#000000CC',
     borderWidth: 1,
-    borderColor: '#FFFFFF33',
+    borderColor: '#00000033',
     justifyContent: 'center',
     alignItems: 'center',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 16,
   },
   brandSection: {
     paddingHorizontal: AUTH_H_PAD,
@@ -61,7 +75,7 @@ export const authScreenStyles = StyleSheet.create({
     marginTop: 2,
   },
   formCard: {
-    flex: 1,
+    flex: 7,
     width: '100%',
     backgroundColor: '#FFFCF5',
     borderTopLeftRadius: AUTH_FORM_RADIUS,
