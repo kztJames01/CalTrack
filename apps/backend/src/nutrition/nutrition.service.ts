@@ -154,6 +154,49 @@ export class NutritionService {
     }
   }
 
+  getIntegrationsStatus() {
+    const nutritionixAppId = this.configService.get<string>('nutritionix.appId');
+    const nutritionixApiKey = this.configService.get<string>('nutritionix.apiKey');
+    const credentialsPath = this.configService.get<string>('googleCloud.credentials');
+    const s3Bucket = this.configService.get<string>('aws.s3.bucket');
+
+    let visionCredentialsFileExists = false;
+    if (credentialsPath) {
+      try {
+        const fs = require('fs') as typeof import('fs');
+        visionCredentialsFileExists = fs.existsSync(credentialsPath);
+      } catch {
+        visionCredentialsFileExists = false;
+      }
+    }
+
+    return {
+      nutritionix: {
+        configured: Boolean(nutritionixAppId && nutritionixApiKey),
+        endpoints: ['GET /nutrition/search', 'GET /nutrition/barcode/:upc', 'GET /nutrition/details/:foodName'],
+      },
+      googleVision: {
+        configured: Boolean(this.visionClient),
+        credentialsPathSet: Boolean(credentialsPath),
+        credentialsFileExists: visionCredentialsFileExists,
+        endpoints: ['POST /nutrition/analyze-photo'],
+        note: 'Photo analysis needs a public image URL (e.g. S3) for Vision API',
+      },
+      recipeData: {
+        configured: false,
+        implemented: false,
+        note: 'No recipe API module in backend yet — only Nutritionix food search/nutrients',
+      },
+      photoStorage: {
+        s3Configured: Boolean(s3Bucket),
+      },
+      ml: {
+        photoPrimary: this.configService.get<string>('ml.photoPrimary'),
+        photoFallback: this.configService.get<string>('ml.photoFallback'),
+      },
+    };
+  }
+
   toAnalyzePhotoApiBody(result: FoodDetectionResult) {
     const detectedFoods = result.topFoods
       .filter((f) => f.nutrition)
