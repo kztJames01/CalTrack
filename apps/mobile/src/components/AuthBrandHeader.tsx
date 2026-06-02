@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { authScreenStyles } from '../styles/authScreenStyles';
 
-const savorSymbol = require('../../assets/images/branding/savor-symbol.png');
+const savorSymbol = require('../../assets/images/icon.png');
 
 export function AuthBrandHeader() {
   return (

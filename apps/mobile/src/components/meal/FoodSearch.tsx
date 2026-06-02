@@ -33,12 +33,24 @@ export default function FoodSearch({ onSelect, placeholder }: FoodSearchProps) {
     try {
       const response = await apiClient.get('/nutrition/search', {
         params: {
-          q: searchQuery,
+          query: searchQuery,
           limit: 20,
         },
       });
 
-      setResults(response.data.foods || []);
+      const foods = response.data.foods || [];
+      setResults(
+        foods.map((f: any) => ({
+          id: f.foodName || f.food_name || String(Math.random()),
+          name: f.foodName || f.food_name,
+          calories: f.calories ?? f.nf_calories ?? 0,
+          protein: f.protein ?? f.nf_protein ?? 0,
+          carbs: f.carbs ?? f.nf_total_carbohydrate ?? 0,
+          fat: f.fat ?? f.nf_total_fat ?? 0,
+          servingSize: f.servingSize ?? f.serving_qty,
+          servingUnit: f.servingUnit ?? f.serving_unit,
+        })),
+      );
     } catch (error) {
       console.error('Search failed:', error);
       setResults([]);

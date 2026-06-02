@@ -111,7 +111,10 @@ export default function CameraScreen() {
         },
       });
 
-      const { photoUrl } = response.data;
+      const photoUrl = response.data.photoUrl || response.data.url;
+      if (!photoUrl) {
+        throw new Error('Upload response missing photo URL');
+      }
 
       // Navigate to food detection screen with photo URL
       router.push(`/(tabs)/camera/detect?photoUrl=${encodeURIComponent(photoUrl)}` as Href);

@@ -95,7 +95,7 @@ export default function FoodDetectionScreen() {
     setIsSearching(true);
     try {
       const response = await apiClient.get('/nutrition/search', {
-        params: { q: searchQuery },
+        params: { query: searchQuery, limit: 15 },
       });
       setSearchResults(response.data.foods || []);
     } catch (error) {
