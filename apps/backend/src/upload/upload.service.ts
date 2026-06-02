@@ -10,55 +10,83 @@ export class UploadService {
   private readonly logger = new Logger(UploadService.name);
   private s3Client: S3Client;
   private bucket: string;
+  private publicBaseUrl: string;
+  private useB2: boolean;
 
   constructor(private configService: ConfigService) {
-    this.bucket = this.configService.get<string>('aws.s3.bucket') || '';
+    const b2Bucket = this.configService.get<string>('b2.bucket');
+    this.useB2 = Boolean(b2Bucket);
 
-    this.s3Client = new S3Client({
-      region: this.configService.get<string>('aws.s3.region') || 'us-east-1',
-      credentials: {
-        accessKeyId: this.configService.get<string>('aws.s3.accessKeyId') || '',
-        secretAccessKey: this.configService.get<string>('aws.s3.secretAccessKey') || '',
-      },
-    });
+    if (this.useB2) {
+      const endpoint = this.configService.get<string>('b2.endpoint') || '';
+      this.bucket = b2Bucket!;
+      this.publicBaseUrl =
+        this.configService.get<string>('b2.publicBaseUrl') ||
+        `${endpoint.replace(/\/$/, '')}/${this.bucket}`;
+
+      this.s3Client = new S3Client({
+        region: this.configService.get<string>('b2.region') || 'us-east-005',
+        endpoint,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: this.configService.get<string>('b2.keyId') || '',
+          secretAccessKey: this.configService.get<string>('b2.applicationKey') || '',
+        },
+      });
+      this.logger.log(`Photo storage: Backblaze B2 bucket "${this.bucket}"`);
+    } else {
+      this.bucket = this.configService.get<string>('aws.s3.bucket') || '';
+      const region = this.configService.get<string>('aws.s3.region') || 'us-east-1';
+      this.publicBaseUrl = `https://${this.bucket}.s3.${region}.amazonaws.com`;
+
+      this.s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId: this.configService.get<string>('aws.s3.accessKeyId') || '',
+          secretAccessKey: this.configService.get<string>('aws.s3.secretAccessKey') || '',
+        },
+      });
+      this.logger.log(`Photo storage: AWS S3 bucket "${this.bucket}"`);
+    }
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.bucket);
   }
 
   async uploadFoodPhoto(
     file: Express.Multer.File,
     userId: string,
-  ): Promise<{ url: string; key: string }> {
-    // Validate file
+  ): Promise<{ url: string; photoUrl: string; key: string }> {
+    if (!this.bucket) {
+      throw new BadRequestException('Photo storage is not configured');
+    }
+
     this.validateImage(file);
 
     try {
-      // Optimize and resize image
       const optimizedBuffer = await this.optimizeImage(file.buffer);
-
-      // Generate unique key
       const key = this.generateKey(userId, file.originalname);
 
-      // Upload to S3
-      const command = new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: optimizedBuffer,
-        ContentType: 'image/jpeg',
-        Metadata: {
-          userId,
-          originalName: file.originalname,
-        },
-      });
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: optimizedBuffer,
+          ContentType: 'image/jpeg',
+          Metadata: {
+            userId,
+            originalName: file.originalname,
+          },
+        }),
+      );
 
-      await this.s3Client.send(command);
-
-      // Generate public or signed URL
-      const url = `https://${this.bucket}.s3.${this.configService.get<string>('aws.s3.region')}.amazonaws.com/${key}`;
-
+      const url = await this.resolvePublicOrSignedUrl(key);
       this.logger.log(`Photo uploaded: ${key}`);
 
-      return { url, key };
-    } catch (error) {
-      this.logger.error(`Upload failed: ${error.message}`);
+      return { url, photoUrl: url, key };
+    } catch (error: any) {
+      this.logger.error(`Upload failed: ${error?.message || error}`);
       throw new BadRequestException('Failed to upload photo');
     }
   }
@@ -68,8 +96,14 @@ export class UploadService {
       Bucket: this.bucket,
       Key: key,
     });
-
     return getSignedUrl(this.s3Client, command, { expiresIn });
+  }
+
+  private async resolvePublicOrSignedUrl(key: string): Promise<string> {
+    if (this.publicBaseUrl) {
+      return `${this.publicBaseUrl.replace(/\/$/, '')}/${key}`;
+    }
+    return this.getSignedUrl(key, 60 * 60 * 24);
   }
 
   private async optimizeImage(buffer: Buffer): Promise<Buffer> {
@@ -84,15 +118,15 @@ export class UploadService {
           progressive: true,
         })
         .toBuffer();
-    } catch (error) {
-      this.logger.error(`Image optimization failed: ${error.message}`);
+    } catch (error: any) {
+      this.logger.error(`Image optimization failed: ${error?.message}`);
       throw new BadRequestException('Invalid image file');
     }
   }
 
   private validateImage(file: Express.Multer.File): void {
     const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
@@ -108,7 +142,6 @@ export class UploadService {
   private generateKey(userId: string, originalName: string): string {
     const timestamp = Date.now();
     const randomString = randomBytes(8).toString('hex');
-    const extension = 'jpg'; // Always use jpg after optimization
-    return `food-photos/${userId}/${timestamp}-${randomString}.${extension}`;
+    return `food-photos/${userId}/${timestamp}-${randomString}.jpg`;
   }
 }

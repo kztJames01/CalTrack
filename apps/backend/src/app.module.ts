@@ -23,6 +23,7 @@ import { CacheModule } from './common/cache/cache.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      envFilePath: ['.env', '../.env', '../../.env'],
     }),
     ThrottlerModule.forRoot([{ //global rate limiting to reduce DDOS, accidental loops and abuses
       ttl: 60000, //60 sec

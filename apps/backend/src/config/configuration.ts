@@ -39,13 +39,28 @@ export default () => ({
       redirectUri: process.env.APPLE_REDIRECT_URI || 'http://localhost:3000/api/auth/apple/callback',
     },
   },
+  nutrition: {
+    provider: process.env.NUTRITION_PROVIDER || 'auto',
+  },
   nutritionix: {
     appId: process.env.NUTRITIONIX_APP_ID,
     apiKey: process.env.NUTRITIONIX_API_KEY,
   },
+  usda: {
+    apiKey: process.env.USDA_API_KEY,
+  },
   googleCloud: {
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
     credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    visionApiKey: process.env.GOOGLE_CLOUD_VISION_API_KEY,
+  },
+  b2: {
+    endpoint: (process.env.B2_ENDPOINT || '').replace(/^["']|["']$/g, ''),
+    keyId: process.env.B2_KEY_ID,
+    applicationKey: process.env.B2_APPLICATION_KEY,
+    bucket: process.env.B2_BUCKET,
+    region: process.env.B2_REGION || 'us-east-005',
+    publicBaseUrl: process.env.B2_PUBLIC_BASE_URL || '',
   },
   sentry: {
     dsn: process.env.SENTRY_DSN,
