@@ -1,37 +1,39 @@
 {
   "expo": {
     "name": "Savor",
-    "slug": "mobile",
+    "slug": "savor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "savor",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F6F2E8"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile",
+      "bundleIdentifier": "com.savor.caltrack",
+      "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleDisplayName": "Savor",
         "NSCameraUsageDescription": "Savor uses your camera to scan barcodes and capture food photos for calorie tracking.",
-        "NSPhotoLibraryUsageDescription": "Savor needs photo library access so you can pick food images to analyze.",
-        "NSPhotoLibraryAddUsageDescription": "Savor can save food photos to your library when you choose to."
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F6F2E8"
       },
+      "package": "com.savor.caltrack",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mobile"
+      "permissions": ["CAMERA"]
     },
     "web": {
       "bundler": "metro",
@@ -53,7 +55,14 @@
           "iosUrlScheme": "com.googleusercontent.apps.445926403883-2ck69oludnmuuk0uhbm7ehn0rhc0mh13"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Savor uses your camera to scan barcodes and capture food photos for calorie tracking.",
+          "enableCodeScanner": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
