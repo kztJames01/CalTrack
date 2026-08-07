@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter, Href } from 'expo-router';
@@ -49,11 +50,7 @@ export default function CameraScreen() {
         'Savor needs access to your camera to capture food photos for nutritional analysis.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => {
-            if (Platform.OS === 'ios') {
-              // Linking.openURL('app-settings:');
-            }
-          }},
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
         ]
       );
     }

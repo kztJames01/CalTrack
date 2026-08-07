@@ -31,9 +31,14 @@ export default function MealLogger() {
   const { createMeal, addFoodToMeal } = useMealStore();
 
   const [mealType, setMealType] = useState<MealType>('breakfast');
-  const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(
-    foodData ? JSON.parse(foodData) : null
-  );
+  const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(() => {
+    if (!foodData) return null;
+    try {
+      return JSON.parse(foodData) as FoodSearchResult;
+    } catch {
+      return null;
+    }
+  });
   const [portionSize, setPortionSize] = useState('1');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [isLogging, setIsLogging] = useState(false);

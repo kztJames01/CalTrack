@@ -38,7 +38,7 @@ const GOALS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, deleteAccount } = useAuthStore();
   const {
     age,
     gender,
@@ -224,8 +224,12 @@ export default function ProfileScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // TODO: Implement account deletion API call
-            Alert.alert('Info', 'Account deletion will be implemented in the backend');
+            try {
+              await deleteAccount();
+              router.replace('/auth/welcome' as Href);
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Could not delete account');
+            }
           },
         },
       ]

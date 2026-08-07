@@ -18,6 +18,8 @@ import { SocialAuthButtons } from '../../components/SocialAuthButtons';
 import { AuthScreenLayout } from '../../components/AuthScreenLayout';
 import { authFormStyles } from '../../styles/authScreenStyles';
 import { colors } from '../../styles/theme';
+import { PRIVACY_POLICY_URL, TERMS_OF_SERVICE_URL } from '../../constants/legal';
+import { Linking } from 'react-native';
 
 const passwordRule =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
@@ -245,6 +247,18 @@ export default function SignupScreen() {
         )}
       </View>
 
+      <Text style={styles.legalText}>
+        By signing up you agree to our{' '}
+        <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_OF_SERVICE_URL)}>
+          Terms
+        </Text>{' '}
+        and{' '}
+        <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+          Privacy Policy
+        </Text>
+        .
+      </Text>
+
       <TouchableOpacity
         style={[authFormStyles.primaryButton, styles.signupButton, isLoading && authFormStyles.primaryButtonDisabled]}
         onPress={handleSubmit(onSubmit)}
@@ -280,5 +294,16 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     marginTop: 10,
+  },
+  legalText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    lineHeight: 18,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  legalLink: {
+    color: colors.secondary,
+    fontWeight: '600',
   },
 });
