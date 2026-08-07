@@ -1,21 +1,32 @@
 import './instrument';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { validateProductionEnv } from './config/validate-env';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  validateProductionEnv();
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const logger = new Logger('Bootstrap');
 
   app.use(helmet());
+  app.set('trust proxy', 1);
 
-  // Enable CORS
+  const isProd = process.env.NODE_ENV === 'production';
+  const corsOrigin = process.env.CORS_ORIGIN || (isProd ? '' : '*');
+  const origins = corsOrigin
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true,
+    origin: isProd ? origins : corsOrigin || '*',
+    credentials: !isProd || origins.length > 0,
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -24,11 +35,10 @@ async function bootstrap() {
     }),
   );
 
-  // Global prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', { exclude: ['health'] });
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
-  console.log(`Application is running on: http://localhost:${port}/api`);
+  logger.log(`Application is running on: http://localhost:${port}/api`);
 }
 bootstrap();

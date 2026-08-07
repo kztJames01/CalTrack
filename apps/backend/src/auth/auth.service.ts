@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { Redis } from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
-import { User, UserProfile } from '../database/entities';
+import { User, UserProfile, Meal, UserGoals, FoodItem } from '../database/entities';
 import {
   RegisterDto,
   LoginDto,
@@ -38,6 +38,12 @@ export class AuthService {
     private userRepository: Repository<User>,
     @InjectRepository(UserProfile)
     private profileRepository: Repository<UserProfile>,
+    @InjectRepository(Meal)
+    private mealRepository: Repository<Meal>,
+    @InjectRepository(UserGoals)
+    private goalsRepository: Repository<UserGoals>,
+    @InjectRepository(FoodItem)
+    private foodItemRepository: Repository<FoodItem>,
     private jwtService: JwtService,
     private configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
@@ -207,9 +213,7 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // TODO: Send email with resetToken
-    // For now, log it (remove in production)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    this.logger.log(`Password reset requested for ${email}`);
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
@@ -408,6 +412,31 @@ export class AuthService {
       ...tokens,
       user: { ...this.toUserResponse(user), isNewUser },
     } as AuthResponse;
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const meals = await this.mealRepository.find({ where: { userId } });
+    if (meals.length) {
+      const mealIds = meals.map((m) => m.id);
+      await this.foodItemRepository
+        .createQueryBuilder()
+        .delete()
+        .where('mealId IN (:...mealIds)', { mealIds })
+        .execute();
+      await this.mealRepository.delete({ userId });
+    }
+
+    await this.goalsRepository.delete({ userId });
+    await this.profileRepository.delete({ userId });
+    await this.redis.del(`refresh_token:${userId}`);
+    await this.userRepository.delete({ id: userId });
+
+    this.logger.log(`Account deleted: ${userId}`);
   }
 
   private async generateTokens(user: User): Promise<{

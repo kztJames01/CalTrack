@@ -12,8 +12,7 @@ COPY turbo.json ./
 COPY packages/ ./packages/
 COPY apps/backend/ ./apps/backend/
 
-RUN npm ci --only=production && \
-    npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 WORKDIR /app/apps/backend
 RUN npm run build

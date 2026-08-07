@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Redis } from 'ioredis';
@@ -332,10 +332,12 @@ export class NutritionService {
   private async analyzeWithGoogleVision(imageUrl: string): Promise<FoodDetectionResult> {
     if (!this.visionClient && !this.visionApiKey) {
       throw new HttpException(
-        'Vision API not configured (set GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_VISION_API_KEY)',
+        'Photo analysis is not available',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
+
+    this.assertSafeImageUrl(imageUrl);
 
     const cacheKey = `${this.cacheKeyPrefix}photo:v4:${imageUrl}`;
     const cached = await this.redis.get(cacheKey);
@@ -472,7 +474,41 @@ export class NutritionService {
     return json.responses?.[0] || {};
   }
 
+  private assertSafeImageUrl(imageUrl: string): void {
+    let parsed: URL;
+    try {
+      parsed = new URL(imageUrl);
+    } catch {
+      throw new BadRequestException('Invalid image URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new BadRequestException('Invalid image URL scheme');
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    const blocked =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local') ||
+      host === '169.254.169.254' ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+
+    if (blocked) {
+      throw new BadRequestException('Image URL host is not allowed');
+    }
+
+    const allowed = this.configService.get<string[]>('storage.allowedImageHosts') || [];
+    if (allowed.length > 0 && !allowed.includes(host)) {
+      throw new BadRequestException('Image URL host is not allowed');
+    }
+  }
+
   private async fetchImageBuffer(imageUrl: string): Promise<Buffer> {
+    this.assertSafeImageUrl(imageUrl);
     const res = await fetch(imageUrl);
     if (!res.ok) {
       throw new Error(`Could not fetch image (${res.status})`);

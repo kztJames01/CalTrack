@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   HttpCode,
   HttpStatus,
@@ -51,6 +52,14 @@ export class AuthController {
     return this.authService.appleLogin(appleAuthDto);
   }
 
+  @Delete('account')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAccount(@Request() req) {
+    await this.authService.deleteAccount(req.user.id);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {

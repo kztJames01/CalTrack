@@ -83,4 +83,36 @@ export default () => ({
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
   },
+  storage: {
+    allowedImageHosts: (() => {
+      const extra = (process.env.ALLOWED_IMAGE_HOSTS || '')
+        .split(',')
+        .map((h) => h.trim())
+        .filter(Boolean);
+      const hosts = new Set<string>(extra);
+      const b2Endpoint = (process.env.B2_ENDPOINT || '').replace(/^["']|["']$/g, '');
+      if (b2Endpoint) {
+        try {
+          hosts.add(new URL(b2Endpoint).hostname);
+        } catch {
+          /* skip */
+        }
+      }
+      const b2Public = process.env.B2_PUBLIC_BASE_URL || '';
+      if (b2Public) {
+        try {
+          hosts.add(new URL(b2Public).hostname);
+        } catch {
+          /* skip */
+        }
+      }
+      const bucket = process.env.AWS_S3_BUCKET;
+      const region = process.env.AWS_REGION || 'us-east-1';
+      if (bucket) {
+        hosts.add(`${bucket}.s3.${region}.amazonaws.com`);
+        hosts.add(`s3.${region}.amazonaws.com`);
+      }
+      return [...hosts];
+    })(),
+  },
 });

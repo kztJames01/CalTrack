@@ -10,11 +10,11 @@ import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { GoogleAuthService } from './services/google-auth.service';
 import { AppleAuthService } from './services/apple-auth.service';
-import { User, UserProfile } from '../database/entities';
+import { User, UserProfile, Meal, UserGoals, FoodItem } from '../database/entities';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserProfile]),
+    TypeOrmModule.forFeature([User, UserProfile, Meal, UserGoals, FoodItem]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
