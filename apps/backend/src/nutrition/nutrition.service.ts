@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import { Redis } from 'ioredis';
@@ -12,6 +12,16 @@ import {
   LocalizedObjectBox,
 } from './interfaces/nutrition.interface';
 import { MlTrainingExportService } from './ml-training-export.service';
+import { UsdaService } from './usda.service';
+
+type VisionAnnotateResponse = {
+  labelAnnotations?: Array<{ description?: string | null; score?: number | null }>;
+  localizedObjectAnnotations?: Array<{
+    name?: string | null;
+    score?: number | null;
+    boundingPoly?: { normalizedVertices?: Array<{ x?: number | null; y?: number | null }> };
+  }>;
+};
 
 @Injectable()
 export class NutritionService {
@@ -20,29 +30,63 @@ export class NutritionService {
   private readonly cacheKeyPrefix = 'nutrition:';
   private readonly cacheTTL = 60 * 60 * 24; // 24 hours
   private visionClient?: ImageAnnotatorClient;
+  private visionApiKey?: string;
 
   constructor(
     private readonly configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
     private readonly mlTrainingExport: MlTrainingExportService,
+    private readonly usdaService: UsdaService,
   ) {
-    // Initialize Google Cloud Vision only if credentials are provided
     const credentialsPath = this.configService.get<string>('googleCloud.credentials');
     if (credentialsPath) {
       this.visionClient = new ImageAnnotatorClient({
         keyFilename: credentialsPath,
       });
     }
+    this.visionApiKey = this.configService.get<string>('googleCloud.visionApiKey');
+  }
+
+  mapFoodsForClient(foods: NutritionixFood[]) {
+    return foods.map((f) => ({
+      foodName: f.food_name,
+      confidence: 1,
+      servingSize: f.serving_qty,
+      servingUnit: f.serving_unit,
+      calories: f.nf_calories,
+      protein: f.nf_protein,
+      carbs: f.nf_total_carbohydrate,
+      fat: f.nf_total_fat,
+    }));
+  }
+
+  private shouldUseUsda(): boolean {
+    const provider = this.configService.get<string>('nutrition.provider') || 'auto';
+    if (provider === 'nutritionix') return false;
+    if (provider === 'usda') return true;
+    return this.usdaService.isConfigured();
   }
 
   async searchFood(query: string, limit: number = 10): Promise<NutritionixFood[]> {
     const cacheKey = `${this.cacheKeyPrefix}search:${query}:${limit}`;
 
-    // Check cache
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for search: ${query}`);
       return JSON.parse(cached);
+    }
+
+    if (this.shouldUseUsda()) {
+      try {
+        const foods = await this.usdaService.searchFood(query, limit);
+        await this.redis.set(cacheKey, JSON.stringify(foods), 'EX', this.cacheTTL);
+        return foods;
+      } catch (error) {
+        this.logger.warn(`USDA search failed, trying Nutritionix: ${error}`);
+        if (this.configService.get<string>('nutrition.provider') === 'usda') {
+          throw new HttpException('Failed to search for food (USDA)', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+      }
     }
 
     try {
@@ -116,11 +160,21 @@ export class NutritionService {
   async getNutritionDetails(foodName: string): Promise<NutritionixFood> {
     const cacheKey = `${this.cacheKeyPrefix}details:${foodName}`;
 
-    // Check cache
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for details: ${foodName}`);
       return JSON.parse(cached);
+    }
+
+    if (this.shouldUseUsda()) {
+      const usdaFood = await this.usdaService.getNutritionDetails(foodName);
+      if (usdaFood) {
+        await this.redis.set(cacheKey, JSON.stringify(usdaFood), 'EX', this.cacheTTL);
+        return usdaFood;
+      }
+      if (this.configService.get<string>('nutrition.provider') === 'usda') {
+        throw new HttpException('Food not found in USDA database', HttpStatus.NOT_FOUND);
+      }
     }
 
     try {
@@ -152,6 +206,55 @@ export class NutritionService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  getIntegrationsStatus() {
+    const nutritionixAppId = this.configService.get<string>('nutritionix.appId');
+    const nutritionixApiKey = this.configService.get<string>('nutritionix.apiKey');
+    const credentialsPath = this.configService.get<string>('googleCloud.credentials');
+    const b2Bucket = this.configService.get<string>('b2.bucket');
+    const awsBucket = this.configService.get<string>('aws.s3.bucket');
+
+    let visionCredentialsFileExists = false;
+    if (credentialsPath) {
+      try {
+        const fs = require('fs') as typeof import('fs');
+        visionCredentialsFileExists = fs.existsSync(credentialsPath);
+      } catch {
+        visionCredentialsFileExists = false;
+      }
+    }
+
+    const visionReady = Boolean(this.visionClient || this.visionApiKey);
+
+    return {
+      nutritionProvider: this.configService.get<string>('nutrition.provider') || 'auto',
+      usda: {
+        configured: this.usdaService.isConfigured(),
+        endpoints: ['GET /nutrition/search', 'GET /nutrition/details/:foodName'],
+      },
+      nutritionix: {
+        configured: Boolean(nutritionixAppId && nutritionixApiKey),
+        endpoints: ['GET /nutrition/search', 'GET /nutrition/barcode/:upc', 'GET /nutrition/details/:foodName'],
+      },
+      googleVision: {
+        configured: visionReady,
+        serviceAccount: Boolean(this.visionClient),
+        apiKey: Boolean(this.visionApiKey),
+        credentialsPathSet: Boolean(credentialsPath),
+        credentialsFileExists: visionCredentialsFileExists,
+        endpoints: ['POST /nutrition/analyze-photo'],
+      },
+      photoStorage: {
+        b2Configured: Boolean(b2Bucket),
+        awsConfigured: Boolean(awsBucket),
+        uploadEndpoints: ['POST /upload/food-photo', 'POST /upload/photo'],
+      },
+      ml: {
+        photoPrimary: this.configService.get<string>('ml.photoPrimary'),
+        photoFallback: this.configService.get<string>('ml.photoFallback'),
+      },
+    };
   }
 
   toAnalyzePhotoApiBody(result: FoodDetectionResult) {
@@ -227,14 +330,16 @@ export class NutritionService {
   }
 
   private async analyzeWithGoogleVision(imageUrl: string): Promise<FoodDetectionResult> {
-    if (!this.visionClient) {
+    if (!this.visionClient && !this.visionApiKey) {
       throw new HttpException(
-        'Vision API not configured',
+        'Photo analysis is not available',
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
 
-    const cacheKey = `${this.cacheKeyPrefix}photo:v3:${imageUrl}`;
+    this.assertSafeImageUrl(imageUrl);
+
+    const cacheKey = `${this.cacheKeyPrefix}photo:v4:${imageUrl}`;
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       this.logger.debug(`Cache hit for photo analysis: ${imageUrl}`);
@@ -242,14 +347,7 @@ export class NutritionService {
     }
 
     try {
-      const [annotate] = await this.visionClient.annotateImage({
-        image: { source: { imageUri: imageUrl } },
-        features: [
-          { type: 'LABEL_DETECTION', maxResults: 30 },
-          { type: 'OBJECT_LOCALIZATION', maxResults: 20 },
-        ],
-      });
-
+      const annotate = await this.runVisionAnnotate(imageUrl);
       const labelRows = annotate.labelAnnotations || [];
       const visionLabels: VisionLabel[] = labelRows
         .filter((label) => label.description && label.score != null)
@@ -325,6 +423,98 @@ export class NutritionService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  private async runVisionAnnotate(imageUrl: string): Promise<VisionAnnotateResponse> {
+    const features = [
+      { type: 'LABEL_DETECTION', maxResults: 30 },
+      { type: 'OBJECT_LOCALIZATION', maxResults: 20 },
+    ];
+
+    if (this.visionClient) {
+      try {
+        const [annotate] = await this.visionClient.annotateImage({
+          image: { source: { imageUri: imageUrl } },
+          features,
+        });
+        return annotate as VisionAnnotateResponse;
+      } catch (err) {
+        this.logger.warn(`Vision imageUri failed, retrying with downloaded bytes: ${err}`);
+      }
+    }
+
+    const base64 = (await this.fetchImageBuffer(imageUrl)).toString('base64');
+
+    if (this.visionClient) {
+      const [annotate] = await this.visionClient.annotateImage({
+        image: { content: base64 },
+        features,
+      });
+      return annotate as VisionAnnotateResponse;
+    }
+
+    const apiKey = this.visionApiKey!;
+    const res = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{ image: { content: base64 }, features }],
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Vision REST failed (${res.status}): ${body}`);
+    }
+
+    const json = (await res.json()) as { responses?: VisionAnnotateResponse[] };
+    return json.responses?.[0] || {};
+  }
+
+  private assertSafeImageUrl(imageUrl: string): void {
+    let parsed: URL;
+    try {
+      parsed = new URL(imageUrl);
+    } catch {
+      throw new BadRequestException('Invalid image URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new BadRequestException('Invalid image URL scheme');
+    }
+
+    const host = parsed.hostname.toLowerCase();
+    const blocked =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local') ||
+      host === '169.254.169.254' ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+
+    if (blocked) {
+      throw new BadRequestException('Image URL host is not allowed');
+    }
+
+    const allowed = this.configService.get<string[]>('storage.allowedImageHosts') || [];
+    if (allowed.length > 0 && !allowed.includes(host)) {
+      throw new BadRequestException('Image URL host is not allowed');
+    }
+  }
+
+  private async fetchImageBuffer(imageUrl: string): Promise<Buffer> {
+    this.assertSafeImageUrl(imageUrl);
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      throw new Error(`Could not fetch image (${res.status})`);
+    }
+    const ab = await res.arrayBuffer();
+    return Buffer.from(ab);
   }
 
   private getNutritionixHeaders() {

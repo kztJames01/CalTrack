@@ -9,7 +9,6 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMealStore } from '../../store/mealStore';
 import { useAuthStore } from '../../store/authStore';
@@ -32,9 +31,14 @@ export default function MealLogger() {
   const { createMeal, addFoodToMeal } = useMealStore();
 
   const [mealType, setMealType] = useState<MealType>('breakfast');
-  const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(
-    foodData ? JSON.parse(foodData) : null
-  );
+  const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(() => {
+    if (!foodData) return null;
+    try {
+      return JSON.parse(foodData) as FoodSearchResult;
+    } catch {
+      return null;
+    }
+  });
   const [portionSize, setPortionSize] = useState('1');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [isLogging, setIsLogging] = useState(false);
@@ -115,16 +119,19 @@ export default function MealLogger() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Meal Type</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={mealType}
-            onValueChange={setMealType}
-            style={styles.picker}
-          >
-            {MEAL_TYPES.map(type => (
-              <Picker.Item key={type.value} label={type.label} value={type.value} />
-            ))}
-          </Picker>
+        <View style={styles.optionRow}>
+          {MEAL_TYPES.map(type => (
+            <TouchableOpacity
+              key={type.value}
+              style={[styles.optionButton, mealType === type.value && styles.optionButtonActive]}
+              onPress={() => setMealType(type.value)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.optionText, mealType === type.value && styles.optionTextActive]}>
+                {type.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -267,15 +274,30 @@ const styles = StyleSheet.create({
     color: theme.colors.foreground,
     marginBottom: theme.spacing.md,
   },
-  pickerContainer: {
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  optionButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: 12,
     backgroundColor: theme.colors.inputBackground,
   },
-  picker: {
-    height: 50,
+  optionButtonActive: {
+    backgroundColor: theme.colors.secondary,
+    borderColor: theme.colors.secondary,
+  },
+  optionText: {
     color: theme.colors.foreground,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  optionTextActive: {
+    color: theme.colors.secondaryForeground,
   },
   customFoodButton: {
     marginTop: theme.spacing.md,

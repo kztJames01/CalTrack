@@ -8,7 +8,6 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { theme } from '../../styles/theme';
 import type { CustomFoodFormProps, FoodSearchResult } from '../../types';
 import { SERVING_UNITS } from '../../types';
@@ -94,17 +93,24 @@ export default function CustomFoodForm({ onSubmit, onCancel }: CustomFoodFormPro
 
         <View style={[styles.inputGroup, styles.flex]}>
           <Text style={styles.label}>Unit *</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={servingUnit}
-              onValueChange={setServingUnit}
-              style={styles.picker}
-            >
-              {SERVING_UNITS.map(unit => (
-                <Picker.Item key={unit} label={unit} value={unit} />
-              ))}
-            </Picker>
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.unitRow}
+          >
+            {SERVING_UNITS.map(unit => (
+              <TouchableOpacity
+                key={unit}
+                style={[styles.unitButton, servingUnit === unit && styles.unitButtonActive]}
+                onPress={() => setServingUnit(unit)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.unitText, servingUnit === unit && styles.unitTextActive]}>
+                  {unit}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </View>
 
@@ -258,15 +264,29 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  pickerContainer: {
+  unitRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  unitButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 13,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: 12,
     backgroundColor: theme.colors.inputBackground,
   },
-  picker: {
-    height: 50,
+  unitButtonActive: {
+    backgroundColor: theme.colors.secondary,
+    borderColor: theme.colors.secondary,
+  },
+  unitText: {
     color: theme.colors.foreground,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.semibold,
+  },
+  unitTextActive: {
+    color: theme.colors.secondaryForeground,
   },
   actions: {
     flexDirection: 'row',

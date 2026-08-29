@@ -28,4 +28,14 @@ export class UploadController {
 
     return this.uploadService.uploadFoodPhoto(file, req.user.id);
   }
+
+  // alias for mobile client
+  @Post('photo')
+  @UseInterceptors(FileInterceptor('photo'))
+  async uploadPhotoAlias(
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.uploadFoodPhoto(req, file);
+  }
 }

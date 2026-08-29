@@ -209,9 +209,9 @@ export const useUserStore = create<UserState>()(
             const mealsCount = await mealCollection
               .query(
                 // @ts-ignore
-                Q.where('meal_date', Q.gte(startOfDay.getTime())),
+                Q.where('date', Q.gte(startOfDay.getTime())),
                 // @ts-ignore
-                Q.where('meal_date', Q.lte(endOfDay.getTime()))
+                Q.where('date', Q.lte(endOfDay.getTime()))
               )
               .fetchCount();
             

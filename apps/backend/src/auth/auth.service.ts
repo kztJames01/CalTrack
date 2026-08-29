@@ -12,7 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { Redis } from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
-import { User, UserProfile } from '../database/entities';
+import { User, UserProfile, Meal, UserGoals, FoodItem } from '../database/entities';
 import {
   RegisterDto,
   LoginDto,
@@ -24,10 +24,13 @@ import { AuthResponse, JwtPayload } from './interfaces/auth.interface';
 import { GoogleAuthService } from './services/google-auth.service';
 import { AppleAuthService } from './services/apple-auth.service';
 import { randomBytes } from 'crypto';
+import { MoreThan } from 'typeorm';
 
 @Injectable()
 export class AuthService {
   private readonly REFRESH_TOKEN_TTL = 60 * 60 * 24 * 7; // 7 days
+  private readonly LOGIN_ATTEMPT_LIMIT = 5;
+  private readonly LOGIN_ATTEMPT_TTL = 60 * 15; // 15 min
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
@@ -35,6 +38,12 @@ export class AuthService {
     private userRepository: Repository<User>,
     @InjectRepository(UserProfile)
     private profileRepository: Repository<UserProfile>,
+    @InjectRepository(Meal)
+    private mealRepository: Repository<Meal>,
+    @InjectRepository(UserGoals)
+    private goalsRepository: Repository<UserGoals>,
+    @InjectRepository(FoodItem)
+    private foodItemRepository: Repository<FoodItem>,
     private jwtService: JwtService,
     private configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
@@ -43,9 +52,8 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const { email, password } = registerDto;
+    const { email, password, firstName, lastName } = registerDto;
 
-    // Check if user exists
     const existingUser = await this.userRepository.findOne({
       where: { email },
     });
@@ -54,13 +62,13 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
+    const displayName = [firstName, lastName].filter(Boolean).join(' ').trim() || undefined;
 
-    // Create user
     const user = this.userRepository.create({
       email,
       password: hashedPassword,
+      displayName,
       emailVerificationToken: randomBytes(32).toString('hex'),
     });
 
@@ -79,43 +87,74 @@ export class AuthService {
 
     return {
       ...tokens,
-      user: {
-        id: savedUser.id,
-        email: savedUser.email,
-        createdAt: savedUser.createdAt,
-      },
+      user: this.toUserResponse(savedUser),
     };
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponse> {
     const { email, password } = loginDto;
+    const attemptKey = `login_attempts:${email.toLowerCase()}`;
+
+    const attempts = await this.redis.get(attemptKey);
+    if (attempts && parseInt(attempts, 10) >= this.LOGIN_ATTEMPT_LIMIT) {
+      throw new UnauthorizedException('Too many login attempts. Try again later.');
+    }
 
     const user = await this.userRepository.findOne({ where: { email } });
 
     if (!user || user.provider !== 'local') {
+      await this.recordFailedLogin(attemptKey);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!user.password) {
+      await this.recordFailedLogin(attemptKey);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      await this.recordFailedLogin(attemptKey);
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    await this.redis.del(attemptKey);
     const tokens = await this.generateTokens(user);
 
     return {
       ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        createdAt: user.createdAt,
-      },
+      user: this.toUserResponse(user),
     };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return this.toUserResponse(user);
+  }
+
+  private toUserResponse(user: User) {
+    const parts = user.displayName?.split(' ') ?? [];
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      firstName: parts[0],
+      lastName: parts.slice(1).join(' ') || undefined,
+      photoUrl: user.photoUrl,
+      provider: user.provider,
+      createdAt: user.createdAt,
+    };
+  }
+
+  private async recordFailedLogin(key: string) {
+    const count = await this.redis.incr(key);
+    if (count === 1) {
+      await this.redis.expire(key, this.LOGIN_ATTEMPT_TTL);
+    }
   }
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
@@ -139,16 +178,13 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      // Generate new tokens
+      // rotate: drop old refresh token before issuing new one
+      await this.redis.del(`refresh_token:${payload.sub}`);
       const tokens = await this.generateTokens(user);
 
       return {
         ...tokens,
-        user: {
-          id: user.id,
-          email: user.email,
-          createdAt: user.createdAt,
-        },
+        user: this.toUserResponse(user),
       };
     } catch (error) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -177,27 +213,24 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // TODO: Send email with resetToken
-    // For now, log it (remove in production)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    this.logger.log(`Password reset requested for ${email}`);
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
     const { token, password } = resetPasswordDto;
 
-    // Find user with valid reset token
     const users = await this.userRepository.find({
       where: {
-        passwordResetExpires: new Date(),
+        passwordResetExpires: MoreThan(new Date()),
       },
     });
 
     let user: User | null = null;
-    
+
     for (const u of users) {
-      if (u.passwordResetToken && u.passwordResetExpires) {
+      if (u.passwordResetToken) {
         const isValid = await bcrypt.compare(token, u.passwordResetToken);
-        if (isValid && u.passwordResetExpires > new Date()) {
+        if (isValid) {
           user = u;
           break;
         }
@@ -294,15 +327,7 @@ export class AuthService {
 
     return {
       ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        photoUrl: user.photoUrl,
-        provider: user.provider,
-        isNewUser,
-        createdAt: user.createdAt,
-      },
+      user: { ...this.toUserResponse(user), isNewUser },
     } as AuthResponse;
   }
 
@@ -385,16 +410,33 @@ export class AuthService {
 
     return {
       ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        photoUrl: user.photoUrl,
-        provider: user.provider,
-        isNewUser,
-        createdAt: user.createdAt,
-      },
+      user: { ...this.toUserResponse(user), isNewUser },
     } as AuthResponse;
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const meals = await this.mealRepository.find({ where: { userId } });
+    if (meals.length) {
+      const mealIds = meals.map((m) => m.id);
+      await this.foodItemRepository
+        .createQueryBuilder()
+        .delete()
+        .where('mealId IN (:...mealIds)', { mealIds })
+        .execute();
+      await this.mealRepository.delete({ userId });
+    }
+
+    await this.goalsRepository.delete({ userId });
+    await this.profileRepository.delete({ userId });
+    await this.redis.del(`refresh_token:${userId}`);
+    await this.userRepository.delete({ id: userId });
+
+    this.logger.log(`Account deleted: ${userId}`);
   }
 
   private async generateTokens(user: User): Promise<{

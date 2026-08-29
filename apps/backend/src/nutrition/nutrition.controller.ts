@@ -17,9 +17,18 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class NutritionController {
   constructor(private readonly nutritionService: NutritionService) {}
 
+  @Get('integrations-status')
+  getIntegrationsStatus() {
+    return this.nutritionService.getIntegrationsStatus();
+  }
+
   @Get('search')
   async searchFood(@Query() searchDto: SearchFoodDto) {
-    return this.nutritionService.searchFood(searchDto.query, searchDto.limit);
+    const foods = await this.nutritionService.searchFood(
+      searchDto.query,
+      searchDto.limit,
+    );
+    return { foods: this.nutritionService.mapFoodsForClient(foods) };
   }
 
   @Get('barcode/:upc')

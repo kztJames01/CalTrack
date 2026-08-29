@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useRouter, Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useMealStore, selectMealsByType } from '../../store/mealStore';
+import { useMealStore } from '../../store/mealStore';
 import { useUserStore } from '../../store/userStore';
 import { useAuthStore } from '../../store/authStore';
 import { syncDatabase } from '../../database/sync';
@@ -20,12 +22,13 @@ const screenWidth = Dimensions.get('window').width;
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { meals, dailyTotals, loadMealsForDate, selectedDate, setSelectedDate } = useMealStore();
+  const { dailyTotals, loadMealsForDate, selectedDate, setSelectedDate } = useMealStore();
   const { dailyCalorieGoal, proteinGoal, carbsGoal, fatGoal, streakDays, calculateStreak } = useUserStore();
   const { user } = useAuthStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const mealsByType = selectMealsByType(useMealStore.getState());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date(selectedDate));
 
   useEffect(() => {
     loadMealsForDate(new Date());
@@ -82,42 +85,44 @@ export default function DashboardScreen() {
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'there';
 
-  const renderMealSection = (type: string, label: string, mealList: any[], icon: string) => {
-    const totalCalories = mealList.reduce((sum, meal) => sum + meal.totalCalories, 0);
-    const minCal = mealList.length > 0 ? Math.round(totalCalories * 0.9) : 0;
-    const maxCal = mealList.length > 0 ? Math.round(totalCalories * 1.1) : 0;
+  const MOCK_NOTIFICATIONS = [
+    { id: '1', title: 'Daily goal', body: 'You are 80% toward your calorie target today.', time: '2h ago' },
+    { id: '2', title: 'Stay hydrated', body: 'Log your water intake to keep your streak.', time: '5h ago' },
+    { id: '3', title: 'Weekly summary', body: 'Your progress report for this week is ready.', time: 'Yesterday' },
+  ];
 
-    return (
-      <View style={styles.mealSection} key={type}>
-        <View style={styles.mealSectionHeader}>
-          <View style={styles.mealSectionLeft}>
-            <Text style={styles.mealSectionTitle}>{label}</Text>
-            {mealList.length > 0 && (
-              <View style={styles.mealCalorieBadge}>
-                <Ionicons name="flame-outline" size={14} color={colors.secondary} />
-                <Text style={styles.mealCalorieText}>
-                  {minCal} - {maxCal} kcal
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.mealSectionRight}>
-            {mealList.map((_, idx) => (
-              <View key={idx} style={styles.mealThumbnail}>
-                <Ionicons name="restaurant-outline" size={16} color={colors.mutedForeground} />
-              </View>
-            ))}
-            <TouchableOpacity
-              style={styles.addMealButton}
-              onPress={() => router.push('/(tabs)/log-meal' as Href)}
-            >
-              <Ionicons name="add" size={20} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
+  const openCalendar = () => {
+    setPickerMonth(new Date(selectedDate));
+    setCalendarOpen(true);
   };
+
+  const pickCalendarDate = (day: Date) => {
+    setSelectedDate(day);
+    loadMealsForDate(day);
+    setCalendarOpen(false);
+  };
+
+  const calendarCells = useMemo(() => {
+    const year = pickerMonth.getFullYear();
+    const month = pickerMonth.getMonth();
+    const first = new Date(year, month, 1);
+    const startPad = first.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: (Date | null)[] = [];
+    for (let i = 0; i < startPad; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push(new Date(year, month, d));
+    }
+    return cells;
+  }, [pickerMonth]);
+
+  const shiftPickerMonth = (delta: number) => {
+    const next = new Date(pickerMonth);
+    next.setMonth(next.getMonth() + delta);
+    setPickerMonth(next);
+  };
+
+  const calendarCellSize = Math.floor((screenWidth - 72) / 7);
 
   return (
     <ScrollView
@@ -138,10 +143,13 @@ export default function DashboardScreen() {
           <Text style={styles.userName}>{firstName}</Text>
         </View>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.headerIconButton}>
+          <TouchableOpacity style={styles.headerIconButton} onPress={openCalendar}>
             <Ionicons name="calendar-outline" size={22} color={colors.foreground} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconButton}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => setNotificationsOpen(true)}
+          >
             <Ionicons name="notifications-outline" size={22} color={colors.foreground} />
           </TouchableOpacity>
         </View>
@@ -235,15 +243,15 @@ export default function DashboardScreen() {
         <View style={styles.macroRow}>
           <View style={styles.macroItem}>
             <View style={[styles.macroDot, { backgroundColor: '#3B82F6' }]} />
-            <Text style={styles.macroLabel}>P: {Math.round(dailyTotals.protein)}g</Text>
+            <Text style={styles.macroLabel}>Protein: {Math.round(dailyTotals.protein)}g</Text>
           </View>
           <View style={styles.macroItem}>
             <View style={[styles.macroDot, { backgroundColor: colors.secondary }]} />
-            <Text style={styles.macroLabel}>C: {Math.round(dailyTotals.carbs)}g</Text>
+            <Text style={styles.macroLabel}>Carbs: {Math.round(dailyTotals.carbs)}g</Text>
           </View>
           <View style={styles.macroItem}>
             <View style={[styles.macroDot, { backgroundColor: '#F59E0B' }]} />
-            <Text style={styles.macroLabel}>F: {Math.round(dailyTotals.fat)}g</Text>
+            <Text style={styles.macroLabel}>Fat: {Math.round(dailyTotals.fat)}g</Text>
           </View>
         </View>
         {/* Progress bar */}
@@ -252,29 +260,99 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Meal Sections */}
-      <View style={styles.mealSectionsContainer}>
-        {renderMealSection('breakfast', 'Breakfast', mealsByType.breakfast, 'sunny-outline')}
-        {renderMealSection('lunch', 'Lunch time', mealsByType.lunch, 'restaurant-outline')}
-        {renderMealSection('dinner', 'Dinner', mealsByType.dinner, 'moon-outline')}
-        {renderMealSection('snacks', 'Snacks', mealsByType.snacks, 'cafe-outline')}
-
-        {meals.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="restaurant-outline" size={48} color={colors.muted} />
-            <Text style={styles.emptyText}>No meals logged yet</Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
-              onPress={() => router.push('/(tabs)/log-meal' as Href)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.emptyButtonText}>Log Your First Meal</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      <View style={styles.logSection}>
+        <TouchableOpacity
+          style={styles.logButton}
+          onPress={() => router.push('/(tabs)/log-meal' as Href)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add-circle" size={26} color={colors.secondaryForeground} />
+          <Text style={styles.logButtonText}>Log meal</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={{ height: 24 }} />
+
+      <Modal visible={calendarOpen} transparent animationType="fade" onRequestClose={() => setCalendarOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setCalendarOpen(false)}>
+          <Pressable style={styles.calendarPopup} onPress={e => e.stopPropagation()}>
+            <View style={styles.calendarPopupHeader}>
+              <TouchableOpacity onPress={() => shiftPickerMonth(-1)}>
+                <Ionicons name="chevron-back" size={22} color={colors.foreground} />
+              </TouchableOpacity>
+              <Text style={styles.calendarPopupTitle}>
+                {pickerMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </Text>
+              <TouchableOpacity onPress={() => shiftPickerMonth(1)}>
+                <Ionicons name="chevron-forward" size={22} color={colors.foreground} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.calendarWeekRow}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                <Text key={`${d}-${i}`} style={styles.calendarWeekLabel}>{d}</Text>
+              ))}
+            </View>
+            <View style={styles.calendarGrid}>
+              {calendarCells.map((day, i) => {
+                if (!day) {
+                  return (
+                    <View
+                      key={`empty-${i}`}
+                      style={{ width: calendarCellSize, height: calendarCellSize }}
+                    />
+                  );
+                }
+                const selected = day.toDateString() === selectedDate.toDateString();
+                const today = day.toDateString() === new Date().toDateString();
+                return (
+                  <TouchableOpacity
+                    key={day.toISOString()}
+                    style={[
+                      styles.calendarCell,
+                      { width: calendarCellSize, height: calendarCellSize },
+                      selected && styles.calendarCellSelected,
+                      today && !selected && styles.calendarCellToday,
+                    ]}
+                    onPress={() => pickCalendarDate(day)}
+                  >
+                    <Text style={[styles.calendarCellText, selected && styles.calendarCellTextSelected]}>
+                      {day.getDate()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={notificationsOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNotificationsOpen(false)}
+      >
+        <View style={styles.drawerRoot}>
+          <Pressable style={styles.drawerBackdrop} onPress={() => setNotificationsOpen(false)} />
+          <View style={styles.notificationDrawer}>
+            <View style={styles.drawerHeader}>
+              <Text style={styles.drawerTitle}>Notifications</Text>
+              <TouchableOpacity onPress={() => setNotificationsOpen(false)}>
+                <Ionicons name="close" size={24} color={colors.foreground} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {MOCK_NOTIFICATIONS.map(n => (
+                <View key={n.id} style={styles.notificationItem}>
+                  <Text style={styles.notificationTitle}>{n.title}</Text>
+                  <Text style={styles.notificationBody}>{n.body}</Text>
+                  <Text style={styles.notificationTime}>{n.time}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -521,84 +599,138 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     borderRadius: 3,
   },
-  // Meals
-  mealSectionsContainer: {
+  logSection: {
     paddingHorizontal: 20,
+    marginBottom: 8,
   },
-  mealSection: {
-    backgroundColor: colors.card,
+  logButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.secondary,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    paddingVertical: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  mealSectionHeader: {
+  logButtonText: {
+    color: colors.secondaryForeground,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(37, 50, 56, 0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  calendarPopup: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  calendarPopupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  mealSectionLeft: {
-    flex: 1,
-  },
-  mealSectionTitle: {
+  calendarPopupTitle: {
     fontSize: 17,
+    fontWeight: '700',
+    color: colors.foreground,
+  },
+  calendarWeekRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  calendarWeekLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
     fontWeight: '600',
+    color: colors.mutedForeground,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  calendarCellSelected: {
+    backgroundColor: colors.primary,
+  },
+  calendarCellToday: {
+    borderWidth: 1,
+    borderColor: colors.secondary,
+  },
+  calendarCellText: {
+    fontSize: 15,
+    color: colors.foreground,
+    fontWeight: '500',
+  },
+  calendarCellTextSelected: {
+    fontWeight: '700',
+  },
+  drawerRoot: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  drawerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(37, 50, 56, 0.35)',
+  },
+  notificationDrawer: {
+    width: screenWidth * 0.82,
+    backgroundColor: 'rgba(255, 252, 245, 0.92)',
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    paddingTop: 56,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  drawerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.foreground,
+  },
+  notificationItem: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  notificationTitle: {
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.foreground,
     marginBottom: 4,
   },
-  mealCalorieBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  mealCalorieText: {
-    fontSize: 13,
+  notificationBody: {
+    fontSize: 14,
     color: colors.mutedForeground,
+    lineHeight: 20,
   },
-  mealSectionRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  mealThumbnail: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.muted,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addMealButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // Empty state
-  emptyState: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
+  notificationTime: {
+    fontSize: 12,
     color: colors.mutedForeground,
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  emptyButton: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: 8,
   },
 });

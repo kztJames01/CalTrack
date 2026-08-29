@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter, Href } from 'expo-router';
@@ -49,11 +50,7 @@ export default function CameraScreen() {
         'Savor needs access to your camera to capture food photos for nutritional analysis.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => {
-            if (Platform.OS === 'ios') {
-              // Linking.openURL('app-settings:');
-            }
-          }},
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
         ]
       );
     }
@@ -111,7 +108,10 @@ export default function CameraScreen() {
         },
       });
 
-      const { photoUrl } = response.data;
+      const photoUrl = response.data.photoUrl || response.data.url;
+      if (!photoUrl) {
+        throw new Error('Upload response missing photo URL');
+      }
 
       // Navigate to food detection screen with photo URL
       router.push(`/(tabs)/camera/detect?photoUrl=${encodeURIComponent(photoUrl)}` as Href);

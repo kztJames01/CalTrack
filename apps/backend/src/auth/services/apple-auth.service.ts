@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import appleSignin from 'apple-signin-auth';
+import { CacheService } from '../../common/cache/cache.service';
 
 export interface AppleTokenPayload {
   sub: string; // User ID
@@ -14,9 +15,16 @@ export interface AppleTokenPayload {
 export class AppleAuthService {
   private readonly logger = new Logger(AppleAuthService.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private cacheService: CacheService,
+  ) {}
 
   async verifyIdToken(idToken: string): Promise<AppleTokenPayload> {
+    const cacheKey = `oauth:apple:${this.cacheService.hashKey(idToken)}`;
+    const cached = await this.cacheService.get<AppleTokenPayload>(cacheKey);
+    if (cached) return cached;
+
     try {
       const clientId = this.configService.get<string>('oauth.apple.clientId');
 
@@ -32,12 +40,14 @@ export class AppleAuthService {
       const emailVerified = result.email_verified === true || result.email_verified === 'true';
       const isPrivateEmail = result.is_private_email === true || result.is_private_email === 'true';
 
-      return {
+      const payload = {
         sub: result.sub,
         email: result.email,
         email_verified: emailVerified,
         is_private_email: isPrivateEmail,
       };
+      await this.cacheService.set(cacheKey, payload, 300);
+      return payload;
     } catch (error) {
       this.logger.error(`Apple token verification failed: ${error.message}`);
       throw new UnauthorizedException('Invalid Apple ID token');
